@@ -16,42 +16,63 @@ function App() {
   const [msgBroadcaster, setMsgBroadcaster] =
     React.useState<MsgBroadcaster | null>(null);
 
-  const [walletStrategy, setWalletStrategy] =
-    React.useState<WalletStrategy | null>(null);
-
   const [publicKeyHex, setPublicKeyHex] = React.useState<string | null>(null);
   const [granteeInjAddress, setGranteeInjAddress] = React.useState<string>('');
 
   const [selectedMsgTypes, setSelectedMsgTypes] = React.useState(messageTypes);
 
   React.useEffect(() => {
-    (async () => {
-      const newWalletStrategy = new WalletStrategy({
-        chainId: ChainId.Testnet,
-        ethereumOptions: {
-          ethereumChainId: 5,
-        },
-      });
-
-      setWalletStrategy(newWalletStrategy);
-
-      const addresses = await newWalletStrategy.getAddresses();
-      if (addresses.length > 0) {
-        setPublicKeyHex(addresses[0]);
-      }
-
-      const newMsgBroadcaster = new MsgBroadcaster({
-        walletStrategy: newWalletStrategy,
-        feePayerPubKey: addresses[0],
-        network: Network.Testnet,
-      });
-
-      setMsgBroadcaster(newMsgBroadcaster);
-
-      const queryString = window.location.search;
-      console.log(queryString);
-    })();
+    onInitialLoad();
   }, []);
+
+  async function onInitialLoad() {
+    parseParams();
+
+    const walletStrategy = new WalletStrategy({
+      chainId: ChainId.Testnet,
+      ethereumOptions: {
+        ethereumChainId: 5,
+      },
+    });
+
+    const addresses = await walletStrategy.getAddresses();
+    if (addresses.length > 0) {
+      setPublicKeyHex(addresses[0]);
+    }
+
+    const newMsgBroadcaster = new MsgBroadcaster({
+      walletStrategy: walletStrategy,
+      feePayerPubKey: addresses[0],
+      network: Network.Testnet,
+    });
+
+    setMsgBroadcaster(newMsgBroadcaster);
+  }
+
+  function parseParams() {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+
+    const granteeInjAddress = urlParams.get('granteeInjAddress');
+
+    if (granteeInjAddress) setGranteeInjAddress(granteeInjAddress);
+    const encodedMsgValues = urlParams.get('msgValues');
+    const msgValuesFromParams = atob(encodedMsgValues || '').split(',');
+
+    if (msgValuesFromParams.length) {
+      setSelectedMsgTypes((prev) => {
+        return prev.map((msgType) => {
+          if (msgValuesFromParams.includes(msgType.value)) {
+            return {
+              ...msgType,
+              isChecked: true,
+            };
+          }
+          return msgType;
+        });
+      });
+    }
+  }
 
   function handleCheckboxChange(value: string, isChecked: boolean) {
     console.log(value);
@@ -71,6 +92,13 @@ function App() {
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    const messageStrings = selectedMsgTypes
+      .filter(({ isChecked }) => isChecked)
+      .map(({ value }) => value)
+      .join(',');
+
+    console.log(btoa(messageStrings));
+
     if (!publicKeyHex) return;
     if (!granteeInjAddress) return;
     if (!msgBroadcaster) return;
@@ -84,8 +112,6 @@ function App() {
           messageType: '/' + value,
         })
       );
-
-    console.log('🪵 | handleFormSubmit | msgs:', msgs);
 
     const result = await msgBroadcaster.broadcast({
       msgs,
