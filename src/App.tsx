@@ -18,7 +18,6 @@ function App() {
   const [granteeInjAddress, setGranteeInjAddress] = React.useState<
     string | null
   >(null);
-  console.log('🪵 | App | granteeInjAddress:', granteeInjAddress);
 
   const [qrToken, setQrToken] = React.useState<{
     token: string;
@@ -39,6 +38,7 @@ function App() {
 
   function onInitialLoad() {
     const token = uuid();
+    // const token = '43846302-5b59-4c46-aff9-474b48f51ca2';
 
     const newWs = new WebSocket(`ws://${SERVER_HOSTNAME}:3333/ws`);
     newWs.onopen = () => {
@@ -46,6 +46,7 @@ function App() {
       const postUrl = newWs.url
         .replace('ws', 'http')
         .replace('/ws', '/api/token/');
+
       setQrToken({ token, websocketUrl, postUrl });
 
       newWs.send(JSON.stringify({ type: 'token', value: token }));
