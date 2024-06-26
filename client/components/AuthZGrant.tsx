@@ -50,12 +50,8 @@ export const AuthZGrant: React.FC<{ granteeInjAddress: string | null }> = ({
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const messageStrings = selectedMsgTypes
-      .map(({ value }) => value)
-
-      .join(',');
-
-    console.log(btoa(messageStrings));
+    // const messageStrings = selectedMsgTypes.map(({ value }) => value).join(',');
+    // console.log(btoa(messageStrings));
 
     if (!publicKeyHex) return;
     if (!granteeInjAddress) return;

@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { WebSocketServer, WebSocket } from 'ws';
+import { serveStatic } from '@hono/node-server/serve-static';
 
 import { SERVER_HOSTNAME } from '../constants';
 
@@ -16,9 +17,11 @@ function setWsConnections(conn: number) {
 
 const app = new Hono();
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!');
-});
+app.get(
+  '/*',
+  serveStatic({ root: './dist/' })
+  // return c.text('Hello Hono!');
+);
 
 app.get('/ws');
 
@@ -34,7 +37,7 @@ app.post('api/token/', async (c) => {
 const port = 3333;
 const server = serve({
   fetch: app.fetch,
-  hostname: SERVER_HOSTNAME,
+  // hostname: SERVER_HOSTNAME,
   port,
 });
 console.log(`Server is running on port ${port}`);
