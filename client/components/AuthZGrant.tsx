@@ -4,11 +4,17 @@ import { ChainId, MsgType } from '@injectivelabs/ts-types';
 import { MsgBroadcaster, WalletStrategy } from '@injectivelabs/wallet-ts';
 import React from 'react';
 
-const messageTypes = Object.entries(MsgType).map(([name, value]) => ({
-  name,
-  value,
-  isChecked: false,
-}));
+//TODO: this looks like it's a bug on injective's side?
+const messageTypes = Object.entries(MsgType)
+  .map(([name, value]) => ({
+    name,
+    value,
+    isChecked: false,
+  }))
+  .filter(
+    (msg) =>
+      !msg.value.includes('injective.exchange.v1beta1.MsgReclaimLockedFunds')
+  );
 
 export const AuthZGrant: React.FC<{ granteeInjAddress: string | null }> = ({
   granteeInjAddress,
