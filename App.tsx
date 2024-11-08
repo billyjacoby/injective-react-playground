@@ -1,11 +1,14 @@
-import React from 'react';
-import { Wallet, WalletStrategy } from '@injectivelabs/wallet-ts';
-import './App.css';
 import {
   getNetworkChainInfo,
-  getNetworkEndpoints,
-  Network,
+  Network
 } from '@injectivelabs/networks';
+import { BaseWalletStrategy } from '@injectivelabs/wallet-core';
+import { PrivateKeyWalletStrategy } from '@injectivelabs/wallet-private-key/src/index';
+import React from 'react';
+
+import { Wallet } from '@injectivelabs/wallet-base';
+
+import './App.css';
 import { Authorization } from './src/components/Authorization';
 import { Positions } from './src/components/Positions';
 
@@ -15,21 +18,32 @@ export type SigObject = {
   signature: string;
 };
 
+export const PRIV_KEY = "9daa554fa955d8c584254f147688b65abc2a60bb3e308bf22d17c5fec73d12e6";
+export const PUB_KEY = '0x697e62225Dd22A5afcAa82901089b2151DAEB706'
+
 function App() {
-  const [wallet, setWallet] = React.useState<WalletStrategy | undefined>();
+  const [wallet, setWallet] = React.useState<BaseWalletStrategy | undefined>();
   const network = Network.TestnetSentry;
   const networkInfo = getNetworkChainInfo(network);
 
   const [signature, setSignature] = React.useState<SigObject | undefined>();
 
   async function onLoad() {
-    const _wallet = new WalletStrategy({
+    const strategy = new PrivateKeyWalletStrategy({
       chainId: networkInfo.chainId,
-      wallet: Wallet.Metamask,
+      privateKey: PRIV_KEY,
       ethereumOptions: {
         ethereumChainId: networkInfo.ethereumChainId!,
-      },
+      }
+    })
+    const _wallet = new BaseWalletStrategy({
+      chainId: networkInfo.chainId,
+      wallet: Wallet.PrivateKey,
+      strategies: {
+        [Wallet.PrivateKey]: strategy,
+      }
     });
+    console.log('🪵 | onLoad | _wallet:', _wallet);
     setWallet(_wallet);
   }
 
