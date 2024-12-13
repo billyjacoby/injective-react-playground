@@ -30,11 +30,14 @@ importers:
         specifier: ^1.14.14
         version: 1.14.14(google-protobuf@3.21.4)
       '@injectivelabs/wallet-ts':
-        specifier: ^1.14.15-beta.13
-        version: 1.14.15-beta.13(@babel/runtime@7.25.7)(@solana/web3.js@1.95.3(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@types/react@18.3.11)(bs58@5.0.0)(bufferutil@4.0.8)(expo@51.0.36(@babel/core@7.25.7)(@babel/preset-env@7.25.7(@babel/core@7.25.7))(bufferutil@4.0.8)(utf-8-validate@5.0.10))(google-protobuf@3.21.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tslib@2.7.0)(utf-8-validate@5.0.10)
+        specifier: 1.14.34-beta.11
+        version: 1.14.34-beta.11(@babel/runtime@7.25.7)(@solana/web3.js@1.95.3(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@types/react@18.3.11)(bs58@5.0.0)(bufferutil@4.0.8)(expo@51.0.36(@babel/core@7.25.7)(@babel/preset-env@7.25.7(@babel/core@7.25.7))(bufferutil@4.0.8)(utf-8-validate@5.0.10))(google-protobuf@3.21.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tslib@2.7.0)(utf-8-validate@5.0.10)
       hono:
         specifier: 4.6.1
         version: 4.6.1
+      magic-sdk:
+        specifier: ^28.9.0
+        version: 28.19.1
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -135,6 +138,24 @@ packages:
       graphql-ws: ^5.5.5
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0
+      subscriptions-transport-ws: ^0.9.0 || ^0.11.0
+    peerDependenciesMeta:
+      graphql-ws:
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      subscriptions-transport-ws:
+        optional: true
+
+  '@apollo/client@3.12.3':
+    resolution: {integrity: sha512-KZ5zymRdb8bMbGUb1wP2U04ff7qIGgaC1BCdCVC+IPFiXkxEhHBc5fDEQOwAUT+vUo9KbBh3g7QK/JCOswn59w==}
+    peerDependencies:
+      graphql: ^15.0.0 || ^16.0.0
+      graphql-ws: ^5.5.5
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc
       subscriptions-transport-ws: ^0.9.0 || ^0.11.0
     peerDependenciesMeta:
       graphql-ws:
@@ -1576,8 +1597,14 @@ packages:
     resolution: {integrity: sha512-d2CGZR2o7fS6sWB7DG/3a95bGKQyHMACZ5aW8qGkkqQpUoZV6C0X7Pc7l4ZNMZkfNBf4VWNe9E1jRsf0G146Ew==}
     engines: {node: '>=18.18'}
 
+  '@injectivelabs/abacus-proto-ts@1.13.3':
+    resolution: {integrity: sha512-GUxYtBRcskg8LkX2g0oK+D9zlbahq2QTBzmLAQoG5zCeXsjoWxkSkmO1Ez146gODL9ytofnwZsCr2hCE7wgH0w==}
+
   '@injectivelabs/core-proto-ts@0.0.34':
     resolution: {integrity: sha512-kg25j+aCFCR/zkfn6U7JlH4Be4VEHO77cjfSLCQfOavQZ2nrXy9pvc9X88OBTYTCL7wLngIqAe0edt39bDk3tQ==}
+
+  '@injectivelabs/core-proto-ts@1.13.4':
+    resolution: {integrity: sha512-81+bwey0qzNgOzUASsxYghSahcWzH5l6bSceW8FdR7w42+Knp+bAgbg12sSyS1hiOO2kMXx6tBvmYkCmnghM1Q==}
 
   '@injectivelabs/dmm-proto-ts@1.0.20':
     resolution: {integrity: sha512-S9vGOAZbNNa+N5QDW2HcXn7ohvU/4qze6wELA9gF8zu8uWbE+UKWTqzkZ+B4XuG1MkJwoHL7pVcj3M+nC9Qe4A==}
@@ -1587,6 +1614,9 @@ packages:
 
   '@injectivelabs/exceptions@1.14.14':
     resolution: {integrity: sha512-yJPfeptWtwyWPYwGDqns5GCi+rq1swAnyrGwySud8esI/mm9kl99j2j8hQhs8vAUg5+I/VKUCA+9X0JGypBczQ==}
+
+  '@injectivelabs/exceptions@1.14.34-beta.0':
+    resolution: {integrity: sha512-0Bt1lGW8O8nm4yBf+xPhKjHVe7Tg+0ujuBEnsPaAZWkct9gHo6NUoYrBusEBPxEtNJMw98RjzGWWKlFAqbZwhQ==}
 
   '@injectivelabs/grpc-web-node-http-transport@0.0.2':
     resolution: {integrity: sha512-rpyhXLiGY/UMs6v6YmgWHJHiO9l0AgDyVNv+jcutNVt4tQrmNvnpvz2wCAGOFtq5LuX/E9ChtTVpk3gWGqXcGA==}
@@ -1606,8 +1636,14 @@ packages:
   '@injectivelabs/indexer-proto-ts@1.11.55':
     resolution: {integrity: sha512-Z22cczdNVdQoFrkz0fkXE0mreJNOySFmwYTusHbR58YJ/bb+fyL5eePJCB2aH3m53AtzaqJE5DmAd8vG/Qf0fg==}
 
+  '@injectivelabs/indexer-proto-ts@1.13.3':
+    resolution: {integrity: sha512-rLesVPCARl+OC82vj063/pUawYu0ISty/2+xg6ya4Lwk6PDbXmtRvw8wpNP6K+pAsBOKaSkRnO4ThP5qbX+E6A==}
+
   '@injectivelabs/mito-proto-ts@1.0.65':
     resolution: {integrity: sha512-kceZP68QrgFop387RYyO7tkfJCYxoktuceHTs9DQP3dJceLqj/V2mz0NlpkkacjgE5NhYkQ/zc0Z40hr8tnYqQ==}
+
+  '@injectivelabs/mito-proto-ts@1.13.2':
+    resolution: {integrity: sha512-D4qEDB4OgaV1LoYNg6FB+weVcLMu5ea0x/W/p+euIVly3qia44GmAicIbQhrkqTs2o2c+1mbK1c4eOzFxQcwhg==}
 
   '@injectivelabs/networks@1.14.13':
     resolution: {integrity: sha512-P+eCQXWpbk4LbPxgTmi2gY7OzdZTNsIEUvDoh59Ma0CkqSFaYMtgB8fZVxpkKM0UPla587EDlEEIVxprDBcnZg==}
@@ -1615,11 +1651,23 @@ packages:
   '@injectivelabs/networks@1.14.15-beta.0':
     resolution: {integrity: sha512-LARsjKbDgypJv5joKQu64eJaSlm9GeaSwJkdEPOkXYrzWMQf7L8ZAnFqyW90mCIf7Yx7lU5FIDGlqJSTTdayxA==}
 
+  '@injectivelabs/networks@1.14.34-beta.0':
+    resolution: {integrity: sha512-TKKmPa6GmV+3ZHIGRVekoamgrzE4HpBh9LsoC3yWqDRJFcp64bdspDIknSX4i5zNfPcEOEe2AoaPgm+w916gqQ==}
+
+  '@injectivelabs/olp-proto-ts@1.13.1':
+    resolution: {integrity: sha512-dKxse7mZpmvRhm00Wn8Yy93EVEvFD7FPWeWFfxga0Patow3HK0D7k43VV7fE5kX9CDM1bxTatEVQ7WYGq4w0Eg==}
+
   '@injectivelabs/sdk-ts@1.14.15-beta.9':
     resolution: {integrity: sha512-Rfo4xRwmpXywrE76bJRuXqazdRt4Xiqhur1yUcA+opIDQTvhLFxZOS9hG/Q0FMsb9mhkrIPbwMErVW5MW1iFIQ==}
 
+  '@injectivelabs/sdk-ts@1.14.34-beta.11':
+    resolution: {integrity: sha512-wcVjkJxSq5zRT6+fpk4FA1ena8i5fRbaNlOr0Phezd470s7cXw/YoehCdo6RyxukG9YA3b679dCbPHQDetxSmA==}
+
   '@injectivelabs/test-utils@1.14.14':
     resolution: {integrity: sha512-jBlZ/l7Teq7qKDngl24mU1WM1cBGYqnvFF39zpjOUAs1f4+gaKzrWHEUXRKvNpdSX/CNYXcIXpsD0caB231rAg==}
+
+  '@injectivelabs/test-utils@1.14.34-beta.3':
+    resolution: {integrity: sha512-VHwFRGWq4a1ftLG6uEKHVd09wmQWCDMEzXqm42PCnBMhWR/zN0CtRfg+BOqzhT7CLvF3PbWK3uGxb2O0ahWJwg==}
 
   '@injectivelabs/token-metadata@1.14.12-beta.0':
     resolution: {integrity: sha512-4uxH4Jqm2eYN3zzLnh6zUsl33VQ47tsW+vyaFv320INbmxAvRH4KmXjZg+aGRcDO8mU5K0aUaOeIVdajEJIQAg==}
@@ -1627,11 +1675,17 @@ packages:
   '@injectivelabs/ts-types@1.14.14':
     resolution: {integrity: sha512-z7qNXHdwbeX8pJ+SLNcSWJDEjfeXTUuA4+zwpUeJQdCIjPBkSm3yiQZBQ5hSJE4Y+vuAuHqNgl3liFPpJ3KsbQ==}
 
+  '@injectivelabs/ts-types@1.14.33':
+    resolution: {integrity: sha512-sJZzMNJtZFFZoPKZ91G09bxrZqQ5aS9omoTjQWy+7OxfiRAakzhsarTueX47hm6oTaN0XeBgD3wkMukkWUaobw==}
+
   '@injectivelabs/utils@1.14.14':
     resolution: {integrity: sha512-SOpm8P7aZGdgs44+PJuYgUuxiBjdEbETZ5BVT5rtL+FUi9RCpTy8nfkTVRYF3meza/jlmTxjekD0F3wpGiPCBw==}
 
-  '@injectivelabs/wallet-ts@1.14.15-beta.13':
-    resolution: {integrity: sha512-/fpXzJPgOF75kxJ/cIhRcM6ruMFWW5f8t8kgsEnzkztl3OanDonoFGfZzzW9cuS8EdVcR7Xt6u/znEtKzSK8Eg==}
+  '@injectivelabs/utils@1.14.34-beta.0':
+    resolution: {integrity: sha512-6FQ4rxtGdkUpRYs0Bxye3U9HD7Ph5bM0/YLrHvqFaCesyOOBAFW5rsdG3tGaKVKM5o9beG4kizqPR9R5BGFSTA==}
+
+  '@injectivelabs/wallet-ts@1.14.34-beta.11':
+    resolution: {integrity: sha512-jIOBuKiQAw2ajsC1ZVxnYY6XQsA2LTDakRY7zHDCP20yFr0zbUJ9OfBtZcGI+P6ttDumYroTz3HrfAD8tp7XxQ==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -1781,19 +1835,19 @@ packages:
   '@magic-ext/oauth2@9.9.0':
     resolution: {integrity: sha512-BmTQiDnHFiIi6mwb8pQozBlMwt/oETf7reElBFoXCGBhmtcOvaCNPkBS0uxdEjarL0SANmXVFr3fZtt0nPCWng==}
 
-  '@magic-sdk/commons@24.11.0':
-    resolution: {integrity: sha512-RoBVb7XlfUH5Or35mQApealfa4TRImtYBble8cxTW9gdax/H3dutlO01wY+jaHJ/boColH9XwcmrIHPP/kKhiA==}
+  '@magic-sdk/commons@24.18.1':
+    resolution: {integrity: sha512-0m2pgPu39BEPLfH/gyuVVgQF1WPBJWfKA65N5tfFCqJ2L+nZVKRmw+kg+Q5H8dMIqLY32sTD0cvjwJxYzPCHQA==}
     peerDependencies:
       '@magic-sdk/provider': '>=18.6.0'
       '@magic-sdk/types': '>=15.8.0'
 
-  '@magic-sdk/provider@28.11.0':
-    resolution: {integrity: sha512-JNrcIL3K/1pOIbpBIcGY2w+ptjFsGfRQuf2W8naKH2Ap6QFDM9iHXt7MjEPBvk2RJ1pz/Nqz+NdsS7InlK62JA==}
+  '@magic-sdk/provider@28.18.1':
+    resolution: {integrity: sha512-9NEY7RoVsjXa9xDbLvAe9rxqvDve+3ywTH1rvQgTX7dsoq7REbeXK6UcrxpsV9enAnEqqhvjWAL+Q3PRwoau9A==}
     peerDependencies:
       localforage: ^1.7.4
 
-  '@magic-sdk/types@24.9.0':
-    resolution: {integrity: sha512-cAonDympI1HZbtbgzANgd8t4ZWN3y2ZCGluW0Todz6WCnhSseY1xH9DMYnufYkSCx5S11HXnNGzP64aeL31oKQ==}
+  '@magic-sdk/types@24.16.1':
+    resolution: {integrity: sha512-XpdL6P36N7XYTiffhvzs49HbhA3uPro4ApcTF6xxk1VNv2L6v28Dg7FnNa8qib0FGHrypZVKK2cWpX6ioi5ZpA==}
 
   '@metamask/eth-sig-util@4.0.1':
     resolution: {integrity: sha512-tghyZKLHZjcdlDqCA3gNZmLeR0XvOE9U1qoQO9ohyAZT6Pya+H9vkBPcsyXytmYLNgVoin7CKCmweo/R43V+tQ==}
@@ -2952,6 +3006,7 @@ packages:
   '@xmldom/xmldom@0.7.13':
     resolution: {integrity: sha512-lm2GW5PkosIzccsaZIz7tp8cPADSIlIHWDFTR1N0SzfinhhYgeIQjFMz4rYzanCScr3DqQLeomUDArp6MWKm+g==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version is no longer supported, please update to at least 0.8.*
 
   '@xmldom/xmldom@0.8.10':
     resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
@@ -3000,8 +3055,8 @@ packages:
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
 
-  alchemy-sdk@2.12.0:
-    resolution: {integrity: sha512-M0jYlreH1aUZ6O6V9hgaWhnai2Ry9cueqswhAUI2hgnoRCgIJ9ke2/+VSKGemdEKhAtD114bU5bdyh3PmvyefA==}
+  alchemy-sdk@3.5.0:
+    resolution: {integrity: sha512-ggY7y+cM6hZKynU7mg6jBUhhAS/68kWn7dPYSyvl9TlCQZnKl3norZKLxbP972NmRDMCqKEDPyYJpvEC6kMj1w==}
 
   ansi-escapes@4.3.2:
     resolution: {integrity: sha512-gKXj5ALrKWQLsYG9jlTRmR/xKluxHV+Z9QEwNIgCfM1/uwPMCuzVVnh5mwTd+OuBZcwSIMbqssNWRm1lE51QaQ==}
@@ -3105,9 +3160,6 @@ packages:
 
   axios@0.21.4:
     resolution: {integrity: sha512-ut5vewkiu8jjGBdqpM44XxjuCjq9LAKeHVmoVfHVzy8eHgxxq8SbAVQNovDA8mVi05kP0Ea/n/UzcSHcTJQfNg==}
-
-  axios@0.26.1:
-    resolution: {integrity: sha512-fPwcX4EvnSHuInCMItEhAGnaSEXRBjtzh9fOtsE6E1G6p7vl7edEeZe11QHf18+6+9gR5PbKV/sGKNaD8YaMeA==}
 
   axios@1.7.7:
     resolution: {integrity: sha512-S4kL7XrjgBmvdGut0sN3yJxqYzrDOnivkBiN0OFs6hLiUam3UPvswUo0kqGyhqUZGEOytHyumEdXsAkgCOUf3Q==}
@@ -5093,6 +5145,9 @@ packages:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
     engines: {node: '>=10'}
 
+  magic-sdk@28.19.1:
+    resolution: {integrity: sha512-a94WqJ6mvSwynekwVfM/diKXCbkieKvCdp/CRDLqlPWEmbv+yLhZiW3B3gwk8nLWjGHZrL/4uCgOHvaZQm05Ng==}
+
   magic-sdk@28.9.0:
     resolution: {integrity: sha512-1OKBx+IWvH0xCNhPUmfo9uP5pOft0jOf53yBO5lEU8piXLWJw85vdC6dVSCCkRJjP6LsSF2GeOYSZ97RgGOPcw==}
 
@@ -6928,6 +6983,7 @@ packages:
 
   uuidv4@6.2.13:
     resolution: {integrity: sha512-AXyzMjazYB3ovL3q051VLH06Ixj//Knx7QnUSi1T//Ie3io6CpsPu9nVMOx5MoLWh6xV0B9J0hIaxungxXUbPQ==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   valid-url@1.0.9:
     resolution: {integrity: sha512-QQDsV8OnSf5Uc30CKSwG9lnhMPe6exHtTXLRYX8uMwKENy640pU+2BgBL0LRbDh/eYRahNCS7aewCx0wf3NYVA==}
@@ -7288,6 +7344,29 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.25
 
   '@apollo/client@3.11.8(@types/react@18.3.11)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.9.0)
+      '@wry/caches': 1.0.1
+      '@wry/equality': 0.5.7
+      '@wry/trie': 0.5.0
+      graphql: 16.9.0
+      graphql-tag: 2.12.6(graphql@16.9.0)
+      hoist-non-react-statics: 3.3.2
+      optimism: 0.18.0
+      prop-types: 15.8.1
+      rehackt: 0.1.0(@types/react@18.3.11)(react@18.3.1)
+      response-iterator: 0.2.6
+      symbol-observable: 4.0.0
+      ts-invariant: 0.10.3
+      tslib: 2.7.0
+      zen-observable-ts: 1.2.5
+    optionalDependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/react'
+
+  '@apollo/client@3.12.3(@types/react@18.3.11)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.9.0)
       '@wry/caches': 1.0.1
@@ -9128,7 +9207,7 @@ snapshots:
       getenv: 1.0.0
       glob: 7.1.6
       resolve-from: 5.0.0
-      semver: 7.5.3
+      semver: 7.6.3
       slash: 3.0.0
       slugify: 1.6.6
       xcode: 3.0.1
@@ -9395,7 +9474,21 @@ snapshots:
 
   '@humanwhocodes/retry@0.3.0': {}
 
+  '@injectivelabs/abacus-proto-ts@1.13.3':
+    dependencies:
+      '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
+      google-protobuf: 3.21.4
+      protobufjs: 7.4.0
+      rxjs: 7.8.1
+
   '@injectivelabs/core-proto-ts@0.0.34':
+    dependencies:
+      '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
+      google-protobuf: 3.21.4
+      protobufjs: 7.4.0
+      rxjs: 7.8.1
+
+  '@injectivelabs/core-proto-ts@1.13.4':
     dependencies:
       '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
       google-protobuf: 3.21.4
@@ -9429,6 +9522,15 @@ snapshots:
     transitivePeerDependencies:
       - google-protobuf
 
+  '@injectivelabs/exceptions@1.14.34-beta.0(google-protobuf@3.21.4)':
+    dependencies:
+      '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
+      '@injectivelabs/ts-types': 1.14.33
+      http-status-codes: 2.3.0
+      shx: 0.3.4
+    transitivePeerDependencies:
+      - google-protobuf
+
   '@injectivelabs/grpc-web-node-http-transport@0.0.2(@injectivelabs/grpc-web@0.0.1(google-protobuf@3.21.4))':
     dependencies:
       '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
@@ -9449,7 +9551,21 @@ snapshots:
       protobufjs: 7.4.0
       rxjs: 7.8.1
 
+  '@injectivelabs/indexer-proto-ts@1.13.3':
+    dependencies:
+      '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
+      google-protobuf: 3.21.4
+      protobufjs: 7.4.0
+      rxjs: 7.8.1
+
   '@injectivelabs/mito-proto-ts@1.0.65':
+    dependencies:
+      '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
+      google-protobuf: 3.21.4
+      protobufjs: 7.4.0
+      rxjs: 7.8.1
+
+  '@injectivelabs/mito-proto-ts@1.13.2':
     dependencies:
       '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
       google-protobuf: 3.21.4
@@ -9477,6 +9593,23 @@ snapshots:
     transitivePeerDependencies:
       - debug
       - google-protobuf
+
+  '@injectivelabs/networks@1.14.34-beta.0(google-protobuf@3.21.4)':
+    dependencies:
+      '@injectivelabs/exceptions': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/ts-types': 1.14.33
+      '@injectivelabs/utils': 1.14.34-beta.0(google-protobuf@3.21.4)
+      shx: 0.3.4
+    transitivePeerDependencies:
+      - debug
+      - google-protobuf
+
+  '@injectivelabs/olp-proto-ts@1.13.1':
+    dependencies:
+      '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
+      google-protobuf: 3.21.4
+      protobufjs: 7.4.0
+      rxjs: 7.8.1
 
   '@injectivelabs/sdk-ts@1.14.15-beta.9(@types/react@18.3.11)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(utf-8-validate@5.0.10)':
     dependencies:
@@ -9525,6 +9658,53 @@ snapshots:
       - subscriptions-transport-ws
       - utf-8-validate
 
+  '@injectivelabs/sdk-ts@1.14.34-beta.11(@types/react@18.3.11)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@apollo/client': 3.12.3(@types/react@18.3.11)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@cosmjs/amino': 0.32.4
+      '@cosmjs/proto-signing': 0.32.4
+      '@cosmjs/stargate': 0.32.4(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      '@ethersproject/bytes': 5.7.0
+      '@injectivelabs/abacus-proto-ts': 1.13.3
+      '@injectivelabs/core-proto-ts': 1.13.4
+      '@injectivelabs/exceptions': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/grpc-web': 0.0.1(google-protobuf@3.21.4)
+      '@injectivelabs/grpc-web-node-http-transport': 0.0.2(@injectivelabs/grpc-web@0.0.1(google-protobuf@3.21.4))
+      '@injectivelabs/grpc-web-react-native-transport': 0.0.2(@injectivelabs/grpc-web@0.0.1(google-protobuf@3.21.4))
+      '@injectivelabs/indexer-proto-ts': 1.13.3
+      '@injectivelabs/mito-proto-ts': 1.13.2
+      '@injectivelabs/networks': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/olp-proto-ts': 1.13.1
+      '@injectivelabs/test-utils': 1.14.34-beta.3(google-protobuf@3.21.4)
+      '@injectivelabs/ts-types': 1.14.33
+      '@injectivelabs/utils': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@metamask/eth-sig-util': 4.0.1
+      '@noble/curves': 1.6.0
+      axios: 1.7.7
+      bech32: 2.0.0
+      bip39: 3.1.0
+      cosmjs-types: 0.9.0
+      crypto-js: 4.2.0
+      ethereumjs-util: 7.1.5
+      ethers: 6.13.3(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      google-protobuf: 3.21.4
+      graphql: 16.9.0
+      http-status-codes: 2.3.0
+      js-sha3: 0.8.0
+      keccak256: 1.0.6
+      secp256k1: 4.0.3
+      shx: 0.3.4
+      snakecase-keys: 5.5.0
+    transitivePeerDependencies:
+      - '@types/react'
+      - bufferutil
+      - debug
+      - graphql-ws
+      - react
+      - react-dom
+      - subscriptions-transport-ws
+      - utf-8-validate
+
   '@injectivelabs/test-utils@1.14.14':
     dependencies:
       axios: 1.7.7
@@ -9535,6 +9715,21 @@ snapshots:
       store2: 2.14.3
     transitivePeerDependencies:
       - debug
+
+  '@injectivelabs/test-utils@1.14.34-beta.3(google-protobuf@3.21.4)':
+    dependencies:
+      '@injectivelabs/exceptions': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/networks': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/ts-types': 1.14.33
+      '@injectivelabs/utils': 1.14.34-beta.0(google-protobuf@3.21.4)
+      axios: 1.7.7
+      bignumber.js: 9.1.2
+      shx: 0.3.4
+      snakecase-keys: 5.5.0
+      store2: 2.14.3
+    transitivePeerDependencies:
+      - debug
+      - google-protobuf
 
   '@injectivelabs/token-metadata@1.14.12-beta.0(google-protobuf@3.21.4)':
     dependencies:
@@ -9558,6 +9753,10 @@ snapshots:
       link-module-alias: 1.2.0
       shx: 0.3.4
 
+  '@injectivelabs/ts-types@1.14.33':
+    dependencies:
+      shx: 0.3.4
+
   '@injectivelabs/utils@1.14.14(google-protobuf@3.21.4)':
     dependencies:
       '@injectivelabs/exceptions': 1.14.14(google-protobuf@3.21.4)
@@ -9573,7 +9772,21 @@ snapshots:
       - debug
       - google-protobuf
 
-  '@injectivelabs/wallet-ts@1.14.15-beta.13(@babel/runtime@7.25.7)(@solana/web3.js@1.95.3(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@types/react@18.3.11)(bs58@5.0.0)(bufferutil@4.0.8)(expo@51.0.36(@babel/core@7.25.7)(@babel/preset-env@7.25.7(@babel/core@7.25.7))(bufferutil@4.0.8)(utf-8-validate@5.0.10))(google-protobuf@3.21.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tslib@2.7.0)(utf-8-validate@5.0.10)':
+  '@injectivelabs/utils@1.14.34-beta.0(google-protobuf@3.21.4)':
+    dependencies:
+      '@injectivelabs/exceptions': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/ts-types': 1.14.33
+      axios: 1.7.7
+      bignumber.js: 9.1.2
+      http-status-codes: 2.3.0
+      shx: 0.3.4
+      snakecase-keys: 5.5.0
+      store2: 2.14.3
+    transitivePeerDependencies:
+      - debug
+      - google-protobuf
+
+  '@injectivelabs/wallet-ts@1.14.34-beta.11(@babel/runtime@7.25.7)(@solana/web3.js@1.95.3(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@types/react@18.3.11)(bs58@5.0.0)(bufferutil@4.0.8)(expo@51.0.36(@babel/core@7.25.7)(@babel/preset-env@7.25.7(@babel/core@7.25.7))(bufferutil@4.0.8)(utf-8-validate@5.0.10))(google-protobuf@3.21.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tslib@2.7.0)(utf-8-validate@5.0.10)':
     dependencies:
       '@cosmjs/launchpad': 0.27.1
       '@cosmjs/proto-signing': 0.32.2
@@ -9581,11 +9794,11 @@ snapshots:
       '@cosmostation/extension-client': 0.1.15
       '@ethereumjs/common': 3.2.0
       '@ethereumjs/tx': 4.2.0
-      '@injectivelabs/exceptions': 1.14.14(google-protobuf@3.21.4)
-      '@injectivelabs/networks': 1.14.15-beta.0(google-protobuf@3.21.4)
-      '@injectivelabs/sdk-ts': 1.14.15-beta.9(@types/react@18.3.11)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(utf-8-validate@5.0.10)
-      '@injectivelabs/ts-types': 1.14.14
-      '@injectivelabs/utils': 1.14.14(google-protobuf@3.21.4)
+      '@injectivelabs/exceptions': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/networks': 1.14.34-beta.0(google-protobuf@3.21.4)
+      '@injectivelabs/sdk-ts': 1.14.34-beta.11(@types/react@18.3.11)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(utf-8-validate@5.0.10)
+      '@injectivelabs/ts-types': 1.14.33
+      '@injectivelabs/utils': 1.14.34-beta.0(google-protobuf@3.21.4)
       '@keplr-wallet/cosmos': 0.12.130
       '@keplr-wallet/types': 0.12.130
       '@ledgerhq/hw-app-cosmos': 6.30.4
@@ -9600,13 +9813,12 @@ snapshots:
       '@toruslabs/torus-embed': 1.41.3(@babel/runtime@7.25.7)
       '@trezor/connect-web': 9.2.1(bufferutil@4.0.8)(expo@51.0.36(@babel/core@7.25.7)(@babel/preset-env@7.25.7(@babel/core@7.25.7))(bufferutil@4.0.8)(utf-8-validate@5.0.10))(tslib@2.7.0)(utf-8-validate@5.0.10)
       '@walletconnect/ethereum-provider': 2.17.0(@types/react@18.3.11)(bufferutil@4.0.8)(react@18.3.1)(utf-8-validate@5.0.10)
-      alchemy-sdk: 2.12.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      alchemy-sdk: 3.5.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       eip1193-provider: 1.0.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       eth-sig-util: 3.0.1
       ethereumjs-util: 7.1.5
       ethers: 6.13.3(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       hdkey: 2.1.0
-      link-module-alias: 1.2.0
       long: 5.2.3
       magic-sdk: 28.9.0
       shx: 0.3.4
@@ -9876,7 +10088,7 @@ snapshots:
       '@ledgerhq/domain-service': 1.2.5
       '@ledgerhq/errors': 6.19.1
       '@ledgerhq/evm-tools': 1.2.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
-      '@ledgerhq/hw-transport': 6.30.4
+      '@ledgerhq/hw-transport': 6.31.4
       '@ledgerhq/hw-transport-mocker': 6.29.4
       '@ledgerhq/logs': 6.12.0
       '@ledgerhq/types-live': 6.51.1
@@ -9897,21 +10109,21 @@ snapshots:
     dependencies:
       '@ledgerhq/devices': 6.27.1
       '@ledgerhq/errors': 6.19.1
-      '@ledgerhq/hw-transport': 6.30.4
+      '@ledgerhq/hw-transport': 6.31.4
       '@ledgerhq/logs': 6.12.0
 
   '@ledgerhq/hw-transport-webhid@6.28.4':
     dependencies:
       '@ledgerhq/devices': 8.4.4
       '@ledgerhq/errors': 6.19.1
-      '@ledgerhq/hw-transport': 6.30.4
+      '@ledgerhq/hw-transport': 6.31.4
       '@ledgerhq/logs': 6.12.0
 
   '@ledgerhq/hw-transport-webusb@6.28.4':
     dependencies:
       '@ledgerhq/devices': 8.4.4
       '@ledgerhq/errors': 6.19.1
-      '@ledgerhq/hw-transport': 6.30.4
+      '@ledgerhq/hw-transport': 6.31.4
       '@ledgerhq/logs': 6.12.0
 
   '@ledgerhq/hw-transport@6.27.1':
@@ -9958,21 +10170,21 @@ snapshots:
     dependencies:
       crypto-js: 3.3.0
 
-  '@magic-sdk/commons@24.11.0(@magic-sdk/provider@28.11.0(localforage@1.10.0))(@magic-sdk/types@24.9.0)':
+  '@magic-sdk/commons@24.18.1(@magic-sdk/provider@28.18.1(localforage@1.10.0))(@magic-sdk/types@24.16.1)':
     dependencies:
-      '@magic-sdk/provider': 28.11.0(localforage@1.10.0)
-      '@magic-sdk/types': 24.9.0
+      '@magic-sdk/provider': 28.18.1(localforage@1.10.0)
+      '@magic-sdk/types': 24.16.1
 
-  '@magic-sdk/provider@28.11.0(localforage@1.10.0)':
+  '@magic-sdk/provider@28.18.1(localforage@1.10.0)':
     dependencies:
-      '@magic-sdk/types': 24.9.0
+      '@magic-sdk/types': 24.16.1
       eventemitter3: 4.0.7
       localforage: 1.10.0
       web3-core: 1.5.2
     transitivePeerDependencies:
       - supports-color
 
-  '@magic-sdk/types@24.9.0': {}
+  '@magic-sdk/types@24.16.1': {}
 
   '@metamask/eth-sig-util@4.0.1':
     dependencies:
@@ -11762,7 +11974,7 @@ snapshots:
 
   '@walletconnect/window-metadata@1.0.0':
     dependencies:
-      '@walletconnect/window-getters': 1.0.0
+      '@walletconnect/window-getters': 1.0.1
 
   '@walletconnect/window-metadata@1.0.1':
     dependencies:
@@ -11839,7 +12051,7 @@ snapshots:
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
 
-  alchemy-sdk@2.12.0(bufferutil@4.0.8)(utf-8-validate@5.0.10):
+  alchemy-sdk@3.5.0(bufferutil@4.0.8)(utf-8-validate@5.0.10):
     dependencies:
       '@ethersproject/abi': 5.7.0
       '@ethersproject/abstract-provider': 5.7.0
@@ -11852,7 +12064,7 @@ snapshots:
       '@ethersproject/units': 5.7.0
       '@ethersproject/wallet': 5.7.0
       '@ethersproject/web': 5.7.1
-      axios: 0.26.1
+      axios: 1.7.7
       sturdy-websocket: 0.2.1
       websocket: 1.0.35
     transitivePeerDependencies:
@@ -11963,12 +12175,6 @@ snapshots:
       possible-typed-array-names: 1.0.0
 
   axios@0.21.4:
-    dependencies:
-      follow-redirects: 1.15.9
-    transitivePeerDependencies:
-      - debug
-
-  axios@0.26.1:
     dependencies:
       follow-redirects: 1.15.9
     transitivePeerDependencies:
@@ -14308,11 +14514,20 @@ snapshots:
     dependencies:
       yallist: 4.0.0
 
+  magic-sdk@28.19.1:
+    dependencies:
+      '@magic-sdk/commons': 24.18.1(@magic-sdk/provider@28.18.1(localforage@1.10.0))(@magic-sdk/types@24.16.1)
+      '@magic-sdk/provider': 28.18.1(localforage@1.10.0)
+      '@magic-sdk/types': 24.16.1
+      localforage: 1.10.0
+    transitivePeerDependencies:
+      - supports-color
+
   magic-sdk@28.9.0:
     dependencies:
-      '@magic-sdk/commons': 24.11.0(@magic-sdk/provider@28.11.0(localforage@1.10.0))(@magic-sdk/types@24.9.0)
-      '@magic-sdk/provider': 28.11.0(localforage@1.10.0)
-      '@magic-sdk/types': 24.9.0
+      '@magic-sdk/commons': 24.18.1(@magic-sdk/provider@28.18.1(localforage@1.10.0))(@magic-sdk/types@24.16.1)
+      '@magic-sdk/provider': 28.18.1(localforage@1.10.0)
+      '@magic-sdk/types': 24.16.1
       localforage: 1.10.0
     transitivePeerDependencies:
       - supports-color

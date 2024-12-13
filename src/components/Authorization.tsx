@@ -1,24 +1,36 @@
-import { getInjectiveAddress } from '@injectivelabs/sdk-ts';
-import { WalletStrategy } from '@injectivelabs/wallet-ts';
-import React from 'react';
-import { client } from '../../utils';
-import { SigObject } from '../../App';
+import { getEthereumAddress } from "@injectivelabs/sdk-ts";
+import { WalletStrategy } from "@injectivelabs/wallet-ts";
+import React from "react";
+import { SigObject } from "../../App";
+import { client, getAccountDetails } from "../../utils";
+import { getEip712TypedData } from "../utils/getEip712TypedData";
 
 export const Authorization = ({
   wallet,
   setSignature,
+  ethereumChainId,
+  address,
+  grpcEndpoint,
 }: {
   wallet?: WalletStrategy;
+  ethereumChainId: number;
   setSignature: (sig: SigObject) => void;
+  address: string | undefined;
+  grpcEndpoint: string;
 }) => {
   async function authorize() {
-    const address = await wallet?.getAddresses();
-    if (!address?.[0]) {
-      console.error('No addresses connected');
+    console.log("AUTHING");
+    console.log("🪵 | authorize | address:", address);
+    if (!address) {
+      console.error("No addresses connected");
       return;
     }
-    const injAddress = getInjectiveAddress(address[0]);
-    console.log('🪵 | retrieveNonce | injAddress:', injAddress);
+    const accountDetails = await getAccountDetails(address, grpcEndpoint);
+    const ethAddress = getEthereumAddress(address);
+    console.log("🪵 | authorize | ethAddress:", ethAddress);
+    console.log("🪵 | authorize | accountDetails:", accountDetails);
+    const injAddress = address;
+    console.log("🪵 | retrieveNonce | injAddress:", injAddress);
     const message = `In order to enable notifications for you address you must adhere to the terms of service.
     
 Click to sign in and accept the Helix Mobile Terms of Service and Privacy Policy.
@@ -31,34 +43,37 @@ ${injAddress}
 Nonce:
 ${crypto.randomUUID()}
 `;
-    console.log('🪵 | retrieveNonce | message:', message);
-    const signature = await wallet?.signArbitrary(address[0], message);
-    console.log('🪵 | retrieveNonce | signedBytes:', signature);
+
+    const magicMessage = JSON.stringify(
+      getEip712TypedData(injAddress, message, ethereumChainId)
+    );
+    console.log("🪵 | authorize | magicMessage:", magicMessage);
+
+    const signature = await wallet?.signEip712TypedData(magicMessage, address);
+    console.log("🪵 | retrieveNonce | signedBytes:", signature);
 
     if (!signature) {
-      return console.error('No signature found');
+      return console.error("No signature found");
     }
 
-    const result = await client.api.user.auth
+    const result = await client.api.debug["check-auth"]
       .$post({
         json: {
           address: injAddress,
           message: message,
+          eip712: magicMessage,
           signature,
+          pubKey: "",
         },
       })
       .then((r) => r.json());
 
-    console.log('🪵 | retrieveNonce | result:', result);
-
-    if (result.isMessageValid) {
-      setSignature({
-        address: injAddress,
-        message: message,
-        signature,
-      });
-    }
+    console.log("🪵 | authorize | result:", result);
   }
 
-  return <button onClick={authorize}>authenticate</button>;
+  return (
+    <button onClick={authorize} disabled={!address}>
+      authenticate
+    </button>
+  );
 };
