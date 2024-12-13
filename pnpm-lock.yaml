@@ -12,8 +12,8 @@ importers:
         specifier: ^0.0.2
         version: 0.0.2(rollup@4.24.0)(vite@5.4.8(@types/node@20.16.10))
       '@hono/node-server':
-        specifier: ^1.11.2
-        version: 1.13.1(hono@4.6.3)
+        specifier: ^1.13.1
+        version: 1.13.1(hono@4.6.1)
       '@injectivelabs/networks':
         specifier: ^1.14.15-beta.0
         version: 1.14.15-beta.0(google-protobuf@3.21.4)
@@ -33,8 +33,8 @@ importers:
         specifier: ^1.14.15-beta.13
         version: 1.14.15-beta.13(@babel/runtime@7.25.7)(@solana/web3.js@1.95.3(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@types/react@18.3.11)(bs58@5.0.0)(bufferutil@4.0.8)(expo@51.0.36(@babel/core@7.25.7)(@babel/preset-env@7.25.7(@babel/core@7.25.7))(bufferutil@4.0.8)(utf-8-validate@5.0.10))(google-protobuf@3.21.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tslib@2.7.0)(utf-8-validate@5.0.10)
       hono:
-        specifier: ^4.6.3
-        version: 4.6.3
+        specifier: 4.6.1
+        version: 4.6.1
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -3138,6 +3138,7 @@ packages:
 
   babel-plugin-react-compiler@0.0.0:
     resolution: {integrity: sha512-Kigl0V36a/6hLVH7+CCe1CCtU3mFBqBd829V//VtuG7I/pyq+B2QZJqOefd63snQmdfCryNhO9XW1FbGPBvYDA==}
+    deprecated: 'This is a bad release: please install from the experimental tag instead'
 
   babel-plugin-react-native-web@0.19.12:
     resolution: {integrity: sha512-eYZ4+P6jNcB37lObWIg0pUbi7+3PKoU1Oie2j0C8UF3cXyXoR74tO2NBjI/FORb2LJyItJZEAmjU5pSaJYEL1w==}
@@ -4469,9 +4470,9 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.6.3:
-    resolution: {integrity: sha512-0LeEuBNFeSHGqZ9sNVVgZjB1V5fmhkBSB0hZrpqStSMLOWgfLy0dHOvrjbJh0H2khsjet6rbHfWTHY0kpYThKQ==}
-    engines: {node: '>=16.9.0'}
+  hono@4.6.1:
+    resolution: {integrity: sha512-6NGwvttY1+HAFii08VYiEKI6ETPAFbpLntpm2M/MogEsAFWdZV74UNT+2M4bmqX90cIQhjlpBSP+tO+CfB0uww==}
+    engines: {node: '>=16.0.0'}
 
   hosted-git-info@3.0.8:
     resolution: {integrity: sha512-aXpmwoOhRBrw6X3j0h5RloK4x1OzsxMPyxqIHyNfSe2pypkVTZFpEiRoSipPEPlMrh0HW/XsjkJ5WgnCirpNUw==}
@@ -9386,9 +9387,9 @@ snapshots:
     dependencies:
       graphql: 16.9.0
 
-  '@hono/node-server@1.13.1(hono@4.6.3)':
+  '@hono/node-server@1.13.1(hono@4.6.1)':
     dependencies:
-      hono: 4.6.3
+      hono: 4.6.1
 
   '@humanwhocodes/module-importer@1.0.1': {}
 
@@ -13720,7 +13721,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.6.3: {}
+  hono@4.6.1: {}
 
   hosted-git-info@3.0.8:
     dependencies:
