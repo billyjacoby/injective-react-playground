@@ -1,11 +1,10 @@
-import React from 'react';
-import { Wallet, WalletStrategy } from '@injectivelabs/wallet-ts';
-import './App.css';
 import {
   getNetworkChainInfo,
-  getNetworkEndpoints,
-  Network,
+  Network
 } from '@injectivelabs/networks';
+import { Wallet, WalletStrategy } from '@injectivelabs/wallet-ts';
+import React from 'react';
+import './App.css';
 import { Authorization } from './src/components/Authorization';
 import { Positions } from './src/components/Positions';
 

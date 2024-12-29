@@ -11,7 +11,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "server": "tsx watch server/index.ts",
-    "serve": "tsx dist/out/index.cjs"
+    "serve": "tsx dist/out/index.cjs",
+    "inj-local": "pnpm add @injectivelabs/networks@file:../injective-ts/packages/networks @injectivelabs/sdk-ts@file:../injective-ts/packages/sdk-ts @injectivelabs/token-metadata@next @injectivelabs/ts-types@file:../injective-ts/packages/ts-types @injectivelabs/utils@file:../injective-ts/packages/utils @injectivelabs/wallet-core@file:../injective-ts/packages/wallets/wallet-core @injectivelabs/wallet-base@file:../injective-ts/packages/wallets/wallet-base"
   },
   "dependencies": {
     "@bangjelkoski/vite-plugin-node-polyfills": "^0.0.2",
@@ -42,7 +43,7 @@
     "@typescript-eslint/parser": "^7.13.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
-    "eslint": "^9.4.0",
+    "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
     "helix-mobile-server": "link:../injective-helix-server",
