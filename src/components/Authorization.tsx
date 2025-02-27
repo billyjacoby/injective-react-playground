@@ -1,14 +1,13 @@
 import { getInjectiveAddress } from '@injectivelabs/sdk-ts';
-import { WalletStrategy } from '@injectivelabs/wallet-ts';
+import { BaseWalletStrategy } from '@injectivelabs/wallet-core';
 import React from 'react';
-import { client } from '../../utils';
 import { SigObject } from '../../App';
 
 export const Authorization = ({
   wallet,
   setSignature,
 }: {
-  wallet?: WalletStrategy;
+  wallet?: BaseWalletStrategy;
   setSignature: (sig: SigObject) => void;
 }) => {
   async function authorize() {
@@ -39,25 +38,11 @@ ${crypto.randomUUID()}
       return console.error('No signature found');
     }
 
-    const result = await client.api.user.auth
-      .$post({
-        json: {
-          address: injAddress,
-          message: message,
-          signature,
-        },
-      })
-      .then((r) => r.json());
-
-    console.log('🪵 | retrieveNonce | result:', result);
-
-    if (result.isMessageValid) {
-      setSignature({
-        address: injAddress,
-        message: message,
-        signature,
-      });
-    }
+    setSignature({
+      address: injAddress,
+      message,
+      signature,
+    });
   }
 
   return <button onClick={authorize}>authenticate</button>;

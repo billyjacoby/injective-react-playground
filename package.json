@@ -12,17 +12,21 @@
     "preview": "vite preview",
     "server": "tsx watch server/index.ts",
     "serve": "tsx dist/out/index.cjs",
-    "inj-local": "pnpm add @injectivelabs/networks@file:../injective-ts/packages/networks @injectivelabs/sdk-ts@file:../injective-ts/packages/sdk-ts @injectivelabs/token-metadata@next @injectivelabs/ts-types@file:../injective-ts/packages/ts-types @injectivelabs/utils@file:../injective-ts/packages/utils @injectivelabs/wallet-core@file:../injective-ts/packages/wallets/wallet-core @injectivelabs/wallet-base@file:../injective-ts/packages/wallets/wallet-base"
+    "inj-local": "pnpm add @injectivelabs/networks@link:../injective-ts/packages/networks @injectivelabs/sdk-ts@link:../injective-ts/packages/sdk-ts @injectivelabs/token-metadata@next @injectivelabs/ts-types@link:../injective-ts/packages/ts-types @injectivelabs/utils@link:../injective-ts/packages/utils @injectivelabs/wallet-core@link:../injective-ts/packages/wallets/wallet-core @injectivelabs/wallet-base@link:../injective-ts/packages/wallets/wallet-base"
   },
   "dependencies": {
     "@bangjelkoski/vite-plugin-node-polyfills": "^0.0.2",
     "@hono/node-server": "^1.13.1",
-    "@injectivelabs/networks": "^1.14.15-beta.0",
-    "@injectivelabs/sdk-ts": "^1.14.15-beta.9",
-    "@injectivelabs/token-metadata": "^1.14.12-beta.0",
-    "@injectivelabs/ts-types": "^1.14.14",
-    "@injectivelabs/utils": "^1.14.14",
-    "@injectivelabs/wallet-ts": "^1.14.15-beta.13",
+    "@injectivelabs/networks": "link:../injective-ts/packages/networks",
+    "@injectivelabs/sdk-ts": "link:../injective-ts/packages/sdk-ts",
+    "@injectivelabs/token-metadata": "1.14.12-beta.0",
+    "@injectivelabs/ts-types": "link:../injective-ts/packages/ts-types",
+    "@injectivelabs/utils": "link:../injective-ts/packages/utils",
+    "@injectivelabs/wallet-base": "link:../injective-ts/packages/wallets/wallet-base",
+    "@injectivelabs/wallet-core": "link:../injective-ts/packages/wallets/wallet-core",
+    "@injectivelabs/wallet-evm": "link:../injective-ts/packages/wallets/wallet-evm",
+    "@injectivelabs/wallet-private-key": "link:../injective-ts/packages/wallets/wallet-private-key",
+    "buffer": "^6.0.3",
     "hono": "4.6.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -51,6 +55,7 @@
     "tailwindcss": "^3.4.4",
     "tsx": "^4.15.2",
     "typescript": "^5.4.5",
-    "vite": "^5.2.13"
+    "vite": "^5.2.13",
+    "vite-plugin-node-polyfills": "^0.23.0"
   }
 }
