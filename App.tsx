@@ -5,10 +5,12 @@ import React from 'react';
 import { Wallet } from '@injectivelabs/wallet-base';
 
 import { getInjectiveAddress } from '@injectivelabs/sdk-ts';
+import { BigNumber } from '@injectivelabs/utils';
 import './App.css';
 import { NETWORK_INFO } from './constants';
 import { Authorization } from './src/components/Authorization';
 import { SendInj } from './src/components/SendInj';
+import { injectiveClients } from './src/injective-clients';
 
 export type SigObject = {
   address: string;
@@ -43,6 +45,20 @@ function App() {
     console.log('🪵 | onLoad | address:', address);
     setInjAddress(getInjectiveAddress(address?.[0]));
     setWallet(_wallet);
+
+    const trades = await injectiveClients.indexerGrpcDerivativesApi.fetchTrades({
+      marketId: '0x4ca0f92fc28be0c9761326016b5a1a2177dd6375558365116b5bdda9abc229ce',
+      pagination: {
+        skip: 0,
+        limit: 1000
+      }
+    })
+
+    console.log('🪵 | onLoad | trades:', trades);
+    const relevant = trades?.trades.filter((t) => new BigNumber(t.executionPrice).lt(new BigNumber(80556000000)))
+    console.log('🪵 | onLoad | relevant:', relevant.map((r) => ({...r, iso: new Date(r.executedAt).toISOString()})));
+
+
   }
 
   React.useEffect(() => {
