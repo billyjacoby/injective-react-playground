@@ -1,81 +1,93 @@
-import { BaseWalletStrategy } from '@injectivelabs/wallet-core';
-import { EvmWalletStrategy } from '@injectivelabs/wallet-evm';
-import React from 'react';
-
-import { Wallet } from '@injectivelabs/wallet-base';
-
-import { getInjectiveAddress } from '@injectivelabs/sdk-ts';
-import { BigNumber } from '@injectivelabs/utils';
-import './App.css';
-import { NETWORK_INFO } from './constants';
-import { Authorization } from './src/components/Authorization';
-import { SendInj } from './src/components/SendInj';
-import { injectiveClients } from './src/injective-clients';
+import { getInjectiveAddress } from "@injectivelabs/sdk-ts";
+import { Wallet } from "@injectivelabs/wallet-base";
+import { BaseWalletStrategy } from "@injectivelabs/wallet-core";
+import { EvmWalletStrategy } from "@injectivelabs/wallet-evm";
+import React from "react";
+import "./App.css";
+import { NETWORK_INFO } from "./constants";
+import { SendInj } from "./src/components/SendInj";
 
 export type SigObject = {
-  address: string;
-  message: string;
-  signature: string;
+	address: string;
+	message: string;
+	signature: string;
 };
 
-
 function App() {
-  const [wallet, setWallet] = React.useState<BaseWalletStrategy | undefined>();
+	const [wallet, setWallet] = React.useState<BaseWalletStrategy | undefined>();
+	const [injAddress, setInjAddress] = React.useState<string | undefined>();
+	const loadEffectHasRun = React.useRef(false);
 
-  const [signature, setSignature] = React.useState<SigObject | undefined>();
-  const [injAddress, setInjAddress] = React.useState<string | undefined>();
+	const onLoad = React.useCallback(async () => {
+		const isConnected = localStorage.getItem("isConnected");
+		if (isConnected) {
+			setInjAddress(isConnected);
+			return;
+		}
 
-  async function onLoad() {
-    const strategy = new EvmWalletStrategy({
-      chainId: NETWORK_INFO.chainId,
-      wallet: Wallet.Metamask,
-      ethereumOptions: {
-        ethereumChainId: NETWORK_INFO.ethereumChainId!,
-      }
-    })
-    const _wallet = new BaseWalletStrategy({
-      chainId: NETWORK_INFO.chainId,
-      wallet: Wallet.Metamask,
-      strategies: {
-        [Wallet.Metamask]: strategy,
-      }
-    });
-    console.log('🪵 | onLoad | _wallet:', _wallet);
-    const address = await _wallet.getAddresses();
-    console.log('🪵 | onLoad | address:', address);
-    setInjAddress(getInjectiveAddress(address?.[0]));
-    setWallet(_wallet);
+		const strategy = new EvmWalletStrategy({
+			chainId: NETWORK_INFO.chainId,
+			wallet: Wallet.Rabby,
+			evmOptions: {
+				evmChainId: NETWORK_INFO.evmChainId ?? 1776,
+			},
+		});
+		const _wallet = new BaseWalletStrategy({
+			chainId: NETWORK_INFO.chainId,
+			wallet: Wallet.Rabby,
+			strategies: {
+				[Wallet.Rabby]: strategy,
+			},
+		});
 
-    const trades = await injectiveClients.indexerGrpcDerivativesApi.fetchTrades({
-      marketId: '0x4ca0f92fc28be0c9761326016b5a1a2177dd6375558365116b5bdda9abc229ce',
-      pagination: {
-        skip: 0,
-        limit: 1000
-      }
-    })
+		setWallet(_wallet);
+	}, []);
 
-    console.log('🪵 | onLoad | trades:', trades);
-    const relevant = trades?.trades.filter((t) => new BigNumber(t.executionPrice).lt(new BigNumber(80556000000)))
-    console.log('🪵 | onLoad | relevant:', relevant.map((r) => ({...r, iso: new Date(r.executedAt).toISOString()})));
+	async function disconnectWallet() {
+		await wallet?.disconnect();
+		setInjAddress(undefined);
+		localStorage.removeItem("isConnected");
+	}
 
+	async function connectWallet() {
+		if (!wallet) {
+			throw new Error("Wallet not connected");
+		}
 
-  }
+		await wallet.enableAndGetAddresses();
+		localStorage.setItem("isConnected", "true");
 
-  React.useEffect(() => {
-    onLoad();
-  }, []);
+		const address = await wallet?.getAddresses();
+		setInjAddress(getInjectiveAddress(address?.[0]));
+	}
 
-  return (
-    <div className="flex flex-col items-center gap-4">
-      <h1 className="text-5xl ">Injective React</h1>
-      <div className="flex flex-col gap-2">
-        {signature && <p>Signature saved!</p>}
-        {!signature && <p className="text-red-500">Signature required!</p>}
-        <Authorization wallet={wallet} setSignature={setSignature} />
-        <SendInj wallet={wallet} address={injAddress} />
-      </div>
-    </div>
-  );
+	React.useEffect(() => {
+		if (!loadEffectHasRun.current) {
+			onLoad();
+			loadEffectHasRun.current = true;
+		}
+	}, [onLoad]);
+
+	return (
+		<div className="flex flex-col items-center gap-4">
+			<h1 className="text-5xl ">Injective React</h1>
+			{injAddress ? (
+				<>
+					<p>Wallet: {injAddress}</p>
+					<button type="button" onClick={disconnectWallet}>
+						Disconnect Wallet
+					</button>
+				</>
+			) : (
+				<button type="button" onClick={connectWallet}>
+					Connect Wallet
+				</button>
+			)}
+			<div className="flex flex-col gap-2">
+				<SendInj wallet={wallet} address={injAddress} />
+			</div>
+		</div>
+	);
 }
 
 export default App;

@@ -1,0 +1,59 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.7/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!**/node_modules",
+			"!**/dist",
+			"!**/build",
+			"!**/.next",
+			"!**/.vite",
+			"!**/coverage",
+			"!**/*.min.js",
+			"!**/*.min.css"
+		]
+	},
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"a11y": {
+				"recommended": true
+			},
+			"complexity": {
+				"recommended": true,
+				"noExcessiveCognitiveComplexity": "warn"
+			},
+			"correctness": {
+				"recommended": true,
+				"noUnusedVariables": "error",
+				"noUnusedImports": {
+					"level": "error",
+					"fix": "safe"
+				},
+				"useExhaustiveDependencies": "warn"
+			},
+			"performance": {
+				"recommended": true
+			},
+			"security": {
+				"recommended": true
+			},
+			"style": {
+				"recommended": true,
+				"useImportType": "off",
+				"useNodejsImportProtocol": "off"
+			},
+			"suspicious": {
+				"recommended": true
+			}
+		}
+	}
+}
