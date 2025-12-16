@@ -4,8 +4,14 @@ import { BaseWalletStrategy } from "@injectivelabs/wallet-core";
 import { EvmWalletStrategy } from "@injectivelabs/wallet-evm";
 import React from "react";
 import "./App.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NETWORK_INFO } from "./constants";
 import { SendInj } from "./src/components/SendInj";
+import {
+	useDerivativeMarkets,
+	useDerivativeMarketsSummary,
+} from "./src/hooks/useDerivatives";
+import { StreamManager } from "./src/lib/stream-manager";
 
 export type SigObject = {
 	address: string;
@@ -17,6 +23,22 @@ function App() {
 	const [wallet, setWallet] = React.useState<BaseWalletStrategy | undefined>();
 	const [injAddress, setInjAddress] = React.useState<string | undefined>();
 	const loadEffectHasRun = React.useRef(false);
+	const {
+		data: derivativeMarketsSummary,
+		isLoading: isLoadingDerivativeMarketsSummary,
+	} = useDerivativeMarketsSummary();
+	console.log(
+		"🪵 | App | isLoadingDerivativeMarketsSummary:",
+		isLoadingDerivativeMarketsSummary,
+	);
+
+	const { data: derivativeMarkets, isLoading: isLoadingDerivativeMarkets } =
+		useDerivativeMarkets();
+
+	console.log(
+		"🪵 | App | isLoadingDerivativeMarkets:",
+		isLoadingDerivativeMarkets,
+	);
 
 	const onLoad = React.useCallback(async () => {
 		const isConnected = localStorage.getItem("isConnected");
@@ -70,6 +92,18 @@ function App() {
 
 	return (
 		<div className="flex flex-col items-center gap-4">
+			{isLoadingDerivativeMarkets ? (
+				<div>Loading...</div>
+			) : (
+				<div>
+					<h2>Derivative Markets</h2>
+					<ul>
+						{derivativeMarkets?.map((market) => (
+							<li key={market.marketId}>{market.ticker}</li>
+						))}
+					</ul>
+				</div>
+			)}
 			<h1 className="text-5xl ">Injective React</h1>
 			{injAddress ? (
 				<>
@@ -86,8 +120,17 @@ function App() {
 			<div className="flex flex-col gap-2">
 				<SendInj wallet={wallet} address={injAddress} />
 			</div>
+			<StreamManager />
 		</div>
 	);
 }
 
-export default App;
+const queryClient = new QueryClient();
+
+export default function WrappedApp() {
+	return (
+		<QueryClientProvider client={queryClient}>
+			<App />
+		</QueryClientProvider>
+	);
+}

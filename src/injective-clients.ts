@@ -1,38 +1,40 @@
+import { InjectiveDerivativeExchangeRPCClient } from "@injectivelabs/grpc-web-indexer";
 import {
-    Network,
-    type NetworkEndpoints,
-    getNetworkEndpoints,
-} from '@injectivelabs/networks';
+	getNetworkEndpoints,
+	Network,
+	type NetworkEndpoints,
+} from "@injectivelabs/networks";
 import {
-    ChainGrpcAuthApi,
-    ChainGrpcAuthZApi,
-    ChainGrpcBankApi,
-    ChainGrpcExchangeApi,
-    ChainGrpcWasmApi,
-    ChainRestAuthApi,
-    IndexerGrpcAccountPortfolioApi,
-    IndexerGrpcArchiverApi,
-    IndexerGrpcDerivativesApi,
-    IndexerGrpcExplorerApi,
-    IndexerGrpcOracleApi,
-    IndexerGrpcSpotApi,
-    IndexerGrpcWeb3GwApi,
-    IndexerRestDerivativesChronosApi,
-    IndexerRestExplorerApi,
-    IndexerRestMarketChronosApi,
-    IndexerRestSpotChronosApi,
-    TxGrpcApi,
-} from '@injectivelabs/sdk-ts';
-import { TokenFactory } from '@injectivelabs/token-metadata';
+	ChainGrpcAuthApi,
+	ChainGrpcAuthZApi,
+	ChainGrpcBankApi,
+	ChainGrpcExchangeApi,
+	ChainGrpcWasmApi,
+	ChainRestAuthApi,
+	IndexerGrpcAccountPortfolioApi,
+	IndexerGrpcArchiverApi,
+	IndexerGrpcDerivativesApi,
+	IndexerGrpcExplorerApi,
+	IndexerGrpcOracleApi,
+	IndexerGrpcSpotApi,
+	IndexerGrpcWeb3GwApi,
+	IndexerRestDerivativesChronosApi,
+	IndexerRestExplorerApi,
+	IndexerRestMarketChronosApi,
+	IndexerRestSpotChronosApi,
+	TxGrpcApi,
+} from "@injectivelabs/sdk-ts";
+import { TokenFactory } from "@injectivelabs/token-metadata";
+import { GrpcWebFetchTransport } from "@protobuf-ts/grpcweb-transport";
 
 export function getInjectiveClients(network: Network) {
 	const endpoints = (() => {
-		if (network === 'mainnet') {
+		if (network === "mainnet") {
 			const endpoints: NetworkEndpoints = {
 				...getNetworkEndpoints(Network.Mainnet),
-				cacheGrpc: 'https://k8s.bm.mainnet.chain.grpc-web.injective.network',
-				grpc: 'https://k8s.bm.mainnet.chain.grpc-web.injective.network',
-				rest: 'https://k8s.bm.mainnet.lcd.injective.network',
+				cacheGrpc: "https://k8s.bm.mainnet.chain.grpc-web.injective.network",
+				grpc: "https://k8s.bm.mainnet.chain.grpc-web.injective.network",
+				rest: "https://k8s.bm.mainnet.lcd.injective.network",
 				// indexer: 'https://k8s.mainnet.exchange.grpc-web.injective.network',
 			};
 			return endpoints;
@@ -40,14 +42,21 @@ export function getInjectiveClients(network: Network) {
 		return getNetworkEndpoints(network);
 	})();
 
-	const IS_MAINNET = network === 'mainnet';
-	const IS_TESTNET = network === 'testnet';
+	const IS_MAINNET = network === "mainnet";
+	const IS_TESTNET = network === "testnet";
 
-    console.log('🪵 | getInjectiveClients | endpoints.indexer:', endpoints.indexer);
+	console.log(
+		"🪵 | getInjectiveClients | endpoints.indexer:",
+		endpoints.indexer,
+	);
 
+	const indexerTransport = new GrpcWebFetchTransport({
+		baseUrl: endpoints.indexer,
+	});
 
 	return {
 		network,
+		endpoints,
 		chainGrpcWasmApi: new ChainGrpcWasmApi(endpoints.grpc),
 		chainBankGrpcApi: new ChainGrpcBankApi(endpoints.grpc),
 		chainGrpcAuthZApi: new ChainGrpcAuthZApi(endpoints.grpc),
@@ -64,9 +73,9 @@ export function getInjectiveClients(network: Network) {
 		indexerGrpcSpotApi: new IndexerGrpcSpotApi(endpoints.indexer),
 		indexerGrpcArchiverApi: new IndexerGrpcArchiverApi(
 			IS_MAINNET
-				? 'https://k8s.mainnet.archiver.grpc-web.injective.network'
+				? "https://k8s.mainnet.archiver.grpc-web.injective.network"
 				: IS_TESTNET
-					? 'https://k8s.testnet.archiver.grpc-web.injective.network'
+					? "https://k8s.testnet.archiver.grpc-web.injective.network"
 					: endpoints.indexer,
 		),
 		indexerGrpcWeb3GwApi: new IndexerGrpcWeb3GwApi(
@@ -84,6 +93,10 @@ export function getInjectiveClients(network: Network) {
 		),
 		tokenFactory: TokenFactory.make(network),
 		// tokenFactoryStatic: new TokenFactoryStatic(getTokens(network)),
+		indexerTransport,
+		derivativeExchangeRPCClient: new InjectiveDerivativeExchangeRPCClient(
+			indexerTransport,
+		),
 	};
 }
 

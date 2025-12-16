@@ -1,0 +1,2 @@
+overrides:
+  '@injectivelabs/grpc-web-indexer': link:../../../.pnpm-global/5/node_modules/@injectivelabs/grpc-web-indexer
