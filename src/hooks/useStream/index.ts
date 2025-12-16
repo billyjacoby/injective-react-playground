@@ -1,6 +1,24 @@
 import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
+import { RpcError } from "@protobuf-ts/runtime-rpc";
 import React from "react";
-import type { UseStreamOptions, UseStreamReturn } from "./types";
+import type { StreamHook, UseStreamOptions, UseStreamReturn } from "./types";
+
+export type { StreamConfig, StreamHook } from "./types";
+
+function handleStreamErrors(error: Error, onError?: (error: Error) => void) {
+	if (error.name === "AbortError" || error.message.includes("[Abort]")) {
+		// AbortError is expected on cleanup
+		return;
+	}
+	if (error.message.includes("BodyStreamBuffer was aborted")) {
+		return console.warn("⚠️  | BodyStreamBuffer was aborted");
+	}
+	if (error instanceof RpcError) {
+		return console.warn("⚠️  | RPC Error:", error.message);
+	}
+
+	return onError?.(error);
+}
 
 function consumeStream<TResponse extends object>(
 	streamCall: ServerStreamingCall<object, TResponse>,
@@ -15,13 +33,8 @@ function consumeStream<TResponse extends object>(
 			}
 			onComplete?.();
 		} catch (error) {
-			// AbortError is expected on cleanup
-			if ((error as Error)?.name !== "AbortError") {
-				if (onError) {
-					onError(error as Error);
-				} else {
-					console.error("❌ | Stream error:", error);
-				}
+			if (error instanceof Error) {
+				handleStreamErrors(error, onError);
 			}
 			onComplete?.();
 		}
@@ -45,7 +58,7 @@ export function useStream<TRequest extends object, TResponse extends object>(
 
 	const stop = React.useCallback(() => {
 		if (abortControllerRef.current) {
-			abortControllerRef.current.abort();
+			abortControllerRef.current.abort("[Abort]: unmounted");
 			abortControllerRef.current = null;
 			setIsActive(false);
 		}
@@ -87,4 +100,30 @@ export function useStream<TRequest extends object, TResponse extends object>(
 	}, [autoStart, enabled, start, stop]);
 
 	return { start, stop, isActive };
+}
+
+/**
+ * Wraps a stream hook and ensures it starts exactly once on mount
+ * and stops on unmount. Use this in StreamManager to avoid the
+ * boilerplate of managing refs and effects for each stream.
+ */
+export function useManagedStream(useStreamHook: StreamHook, enabled = true) {
+	const { start, stop, isActive } = useStreamHook();
+	const hasStartedRef = React.useRef(false);
+
+	React.useEffect(() => {
+		if (enabled && !hasStartedRef.current) {
+			start();
+			hasStartedRef.current = true;
+		}
+
+		return () => {
+			if (hasStartedRef.current) {
+				stop();
+				hasStartedRef.current = false;
+			}
+		};
+	}, [enabled, start, stop]);
+
+	return { isActive };
 }

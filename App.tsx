@@ -4,13 +4,15 @@ import { BaseWalletStrategy } from "@injectivelabs/wallet-core";
 import { EvmWalletStrategy } from "@injectivelabs/wallet-evm";
 import React from "react";
 import "./App.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { NETWORK_INFO } from "./constants";
+import { DerivativeMarket } from "./src/components/DerivativeMarket";
 import { SendInj } from "./src/components/SendInj";
 import {
-	useDerivativeMarkets,
-	useDerivativeMarketsSummary,
-} from "./src/hooks/useDerivatives";
+	refetchDerivativeMarkets,
+	useDerivativeMarketTickers,
+} from "./src/hooks/useDerivativeMarkets";
+import { queryClient } from "./src/lib/query-client";
 import { StreamManager } from "./src/lib/stream-manager";
 
 export type SigObject = {
@@ -23,22 +25,11 @@ function App() {
 	const [wallet, setWallet] = React.useState<BaseWalletStrategy | undefined>();
 	const [injAddress, setInjAddress] = React.useState<string | undefined>();
 	const loadEffectHasRun = React.useRef(false);
+
 	const {
-		data: derivativeMarketsSummary,
-		isLoading: isLoadingDerivativeMarketsSummary,
-	} = useDerivativeMarketsSummary();
-	console.log(
-		"🪵 | App | isLoadingDerivativeMarketsSummary:",
-		isLoadingDerivativeMarketsSummary,
-	);
-
-	const { data: derivativeMarkets, isLoading: isLoadingDerivativeMarkets } =
-		useDerivativeMarkets();
-
-	console.log(
-		"🪵 | App | isLoadingDerivativeMarkets:",
-		isLoadingDerivativeMarkets,
-	);
+		data: derivativeMarketsTickers,
+		isLoading: isLoadingDerivativeMarketsTickers,
+	} = useDerivativeMarketTickers();
 
 	const onLoad = React.useCallback(async () => {
 		const isConnected = localStorage.getItem("isConnected");
@@ -92,14 +83,19 @@ function App() {
 
 	return (
 		<div className="flex flex-col items-center gap-4">
-			{isLoadingDerivativeMarkets ? (
+			{isLoadingDerivativeMarketsTickers ? (
 				<div>Loading...</div>
 			) : (
 				<div>
-					<h2>Derivative Markets</h2>
+					<div className="flex flex-col gap-2">
+						<h2>Derivative Markets</h2>
+						<button type="button" onClick={refetchDerivativeMarkets}>
+							Refresh
+						</button>
+					</div>
 					<ul>
-						{derivativeMarkets?.map((market) => (
-							<li key={market.marketId}>{market.ticker}</li>
+						{derivativeMarketsTickers?.map((market) => (
+							<DerivativeMarket key={market.ticker} ticker={market.ticker} />
 						))}
 					</ul>
 				</div>
@@ -124,8 +120,6 @@ function App() {
 		</div>
 	);
 }
-
-const queryClient = new QueryClient();
 
 export default function WrappedApp() {
 	return (

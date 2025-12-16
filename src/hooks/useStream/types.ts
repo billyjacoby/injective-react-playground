@@ -40,3 +40,16 @@ export type UseStreamReturn = {
 	/** Whether the stream is currently active */
 	isActive: boolean;
 };
+
+/** A hook that returns UseStreamReturn (from useStream with autoStart: false) */
+export type StreamHook = () => UseStreamReturn;
+
+/** Configuration for a managed stream */
+export type StreamConfig = {
+	/** Unique identifier for the stream */
+	id: string;
+	/** The stream hook to use */
+	useStreamHook: StreamHook;
+	/** Whether this stream is enabled. Default: true */
+	enabled?: boolean;
+};
