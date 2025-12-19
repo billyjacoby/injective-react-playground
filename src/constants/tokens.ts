@@ -50,8 +50,15 @@ export const usdtToken: TokenInfo = {
 };
 
 // wETH/USDT spot market ID on Injective mainnet
-export const WETH_USDT_MARKET_ID =
+const WETH_USDT_MARKET_ID_MAINNET =
 	"0xd1956e20d74eeb1febe31cd37060781ff1cb266f49e0512b446a5fafa9a16034";
+
+const WETH_USDT_MARKET_ID_SEPOLIA =
+	"0xa97182f11f1aa5339c7f4c3fe3cc1c69b39079f11b864c86d912956c5c2db75c";
+
+export const WETH_USDT_MARKET_ID = IS_MAINNET
+	? WETH_USDT_MARKET_ID_MAINNET
+	: WETH_USDT_MARKET_ID_SEPOLIA;
 
 // WETH contract address on Ethereum mainnet
 export const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";

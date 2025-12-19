@@ -8,7 +8,9 @@ import {
 } from "@injectivelabs/networks";
 import { EvmChainId } from "@injectivelabs/ts-types";
 
-export const NETWORK = Network.Mainnet;
+// Set network based on environment variable, default to testnet for development
+export const NETWORK =
+	(import.meta.env.VITE_NETWORK as Network | undefined) ?? Network.Testnet;
 export const NETWORK_INFO = getNetworkChainInfo(NETWORK);
 
 export const ETHEREUM_CHAIN_ID = isMainnet(NETWORK)
@@ -23,7 +25,8 @@ export const IS_DEVNET = isDevnet(NETWORK);
 
 export const ENDPOINTS = getNetworkEndpoints(NETWORK);
 
-export const ALCHEMY_BASE_URL = "https://eth-mainnet.g.alchemy.com/v2/";
+export const ALCHEMY_MAINNET_BASE_URL = "https://eth-mainnet.g.alchemy.com/v2/";
+export const ALCHEMY_SEPOLIA_BASE_URL = "https://eth-sepolia.g.alchemy.com/v2/";
 
 export const APP_NAME = "Injective Onramp";
 
@@ -34,24 +37,24 @@ export const ALCHEMY_SEPOLIA_KEY = (import.meta.env.VITE_ALCHEMY_SEPOLIA_KEY ||
 
 export const getAlchemyUrl = (network: Network): string => {
 	if (isMainnet(network)) {
-		return `${ALCHEMY_BASE_URL}${ALCHEMY_KEY}`;
+		return `${ALCHEMY_MAINNET_BASE_URL}${ALCHEMY_KEY}`;
 	}
 
 	if (isTestnet(network)) {
-		return `${ALCHEMY_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
+		return `${ALCHEMY_SEPOLIA_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
 	}
 
-	return `${ALCHEMY_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
+	return `${ALCHEMY_SEPOLIA_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
 };
 
 export const getAlchemyRpcEndpointForChainId = (chainId: EvmChainId) => {
 	if (chainId === EvmChainId.Mainnet) {
-		return `${ALCHEMY_BASE_URL}${ALCHEMY_KEY}`;
+		return `${ALCHEMY_MAINNET_BASE_URL}${ALCHEMY_KEY}`;
 	}
 
 	if (chainId === EvmChainId.Sepolia) {
-		return `${ALCHEMY_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
+		return `${ALCHEMY_SEPOLIA_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
 	}
 
-	return `${ALCHEMY_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
+	return `${ALCHEMY_SEPOLIA_BASE_URL}${ALCHEMY_SEPOLIA_KEY}`;
 };
