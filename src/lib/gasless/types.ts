@@ -1,12 +1,13 @@
-import type { mainnet, sepolia } from "@account-kit/infra";
-import type { Address, Hex } from "viem";
+import type { Address, Chain, Hex } from "viem";
+import type { SmartAccount } from "viem/account-abstraction";
+import { mainnet, sepolia } from "viem/chains";
 
 /**
  * Configuration for the gasless transaction client
  */
 export type GaslessClientConfig = {
 	/** The chain to use - defaults based on IS_MAINNET */
-	chain?: typeof sepolia | typeof mainnet;
+	chain?: typeof sepolia | typeof mainnet | Chain;
 	/** Alchemy API key - defaults to env vars */
 	apiKey?: string;
 	/** Gas Manager Policy ID from Alchemy dashboard */
@@ -17,9 +18,11 @@ export type GaslessClientConfig = {
  * Result from creating a gasless client
  */
 export type GaslessClientResult = {
-	/** The smart account client for sending user operations */
-	// biome-ignore lint/suspicious/noExplicitAny: Client type is complex, using any for simplicity
-	client: any;
+	/** The smart account instance */
+	account: SmartAccount;
+	/** The bundler client for sending user operations */
+	// biome-ignore lint/suspicious/noExplicitAny: BundlerClient type is complex
+	bundlerClient: any;
 	/** The EOA address that owns the smart account */
 	ownerAddress: Address;
 	/** The smart account (contract) address */
@@ -31,7 +34,7 @@ export type GaslessClientResult = {
  */
 export type GaslessCall = {
 	/** Target contract/address to call */
-	target: Address;
+	to: Address;
 	/** Calldata to send (use "0x" for no data) */
 	data?: Hex;
 	/** Value in wei to send (defaults to 0) */
@@ -74,9 +77,6 @@ export type GaslessTestResult = GaslessTransactionResult & {
 export type SponsorshipEligibility = {
 	/** Whether the transaction is eligible for sponsorship */
 	eligible: boolean;
-	/** The prepared request if eligible */
-	// biome-ignore lint/suspicious/noExplicitAny: Request type varies
-	request?: any;
 };
 
 /**

@@ -75,7 +75,7 @@ export async function gaslessWrapEth(
 
 	const result = await sendGasless(
 		{
-			target: WETH_ADDRESS,
+			to: WETH_ADDRESS,
 			data: depositCalldata,
 			value,
 		},
@@ -216,8 +216,8 @@ export async function gaslessWrapAndApprove(
 	// Execute both calls atomically in one UserOperation
 	const result = await sendGaslessBatch(
 		[
-			{ target: WETH_ADDRESS, data: depositCalldata, value },
-			{ target: WETH_ADDRESS, data: approveCalldata },
+			{ to: WETH_ADDRESS, data: depositCalldata, value },
+			{ to: WETH_ADDRESS, data: approveCalldata },
 		],
 		config,
 	);
@@ -287,7 +287,7 @@ export async function checkWrapEligibility(
 	});
 
 	const { eligible } = await checkGaslessEligibility(
-		{ target: WETH_ADDRESS, data: depositCalldata, value },
+		{ to: WETH_ADDRESS, data: depositCalldata, value },
 		config,
 	);
 

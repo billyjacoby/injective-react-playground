@@ -21,10 +21,6 @@
 		"inj-latest": "pnpm add @injectivelabs/networks@latest @injectivelabs/sdk-ts@latest @injectivelabs/token-metadata@latest @injectivelabs/ts-types@latest @injectivelabs/utils@latest @injectivelabs/wallet-core@latest @injectivelabs/wallet-base@latest"
 	},
 	"dependencies": {
-		"@aa-sdk/core": "^4.81.3",
-		"@account-kit/infra": "^4.81.3",
-		"@account-kit/smart-contracts": "^4.81.3",
-		"@bangjelkoski/vite-plugin-node-polyfills": "^0.0.2",
 		"@hono/node-server": "^1.13.1",
 		"@injectivelabs/networks": "^1.16.34",
 		"@injectivelabs/sdk-ts": "^1.16.34",
@@ -40,6 +36,7 @@
 		"bech32": "^2.0.0",
 		"buffer": "^6.0.3",
 		"hono": "4.6.1",
+		"permissionless": "^0.3.2",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"react-qr-code": "^2.0.14",

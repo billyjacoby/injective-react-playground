@@ -197,7 +197,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			const config = getDefaultConfig();
 			if (!config.policyId) throw new Error("Missing policy ID");
 
-			await sendGasless({ target: ownerAddress, value: 0n }, config);
+			await sendGasless({ to: ownerAddress, value: 0n }, config);
 			set({ status: "Test gasless tx successful!", isProcessing: false });
 		} catch (error) {
 			console.error("Test gasless error:", error);
@@ -328,7 +328,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				return;
 			}
 
-			await sendGasless({ target: ownerAddress, value: amount }, config);
+			await sendGasless({ to: ownerAddress, value: amount }, config);
 			set({ status: "ETH withdrawn (gasless)!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
@@ -499,7 +499,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 			await sendGasless(
 				{
-					target: wethToken.address as Address,
+					to: wethToken.address as Address,
 					data: depositCalldata,
 					value: amount,
 				},
@@ -510,11 +510,11 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			await get().fetchBalances();
 		} catch (error) {
 			console.error("Wrap ETH error:", error);
-		set({
-			status: error instanceof Error ? error.message : "Wrap failed",
-			isProcessing: false,
-		});
-	}
+			set({
+				status: error instanceof Error ? error.message : "Wrap failed",
+				isProcessing: false,
+			});
+		}
 	},
 
 	unwrapWethFromEoa: async () => {
@@ -595,7 +595,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 			await sendGasless(
 				{
-					target: wethToken.address as Address,
+					to: wethToken.address as Address,
 					data: withdrawCalldata,
 					value: 0n,
 				},

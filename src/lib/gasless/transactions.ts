@@ -18,7 +18,7 @@ import type {
 /**
  * Sends a single gasless (sponsored) transaction.
  *
- * @param call - The call to execute (target, data, value)
+ * @param call - The call to execute (to, data, value)
  * @param config - Client configuration (policyId required, others optional)
  * @param options - Transaction options
  * @returns The transaction result with hashes
@@ -27,14 +27,14 @@ import type {
  * ```ts
  * // Simple ETH transfer (0 value)
  * const result = await sendGasless(
- *   { target: '0xRecipient' },
+ *   { to: '0xRecipient' },
  *   { policyId: 'your-policy-id' }
  * );
  *
  * // Contract call with data
  * const result = await sendGasless(
  *   {
- *     target: '0xContract',
+ *     to: '0xContract',
  *     data: encodeFunctionData({ abi, functionName: 'mint', args: [1] }),
  *     value: parseEther('0.1')
  *   },
@@ -48,34 +48,41 @@ export async function sendGasless(
 	options: SendGaslessOptions = {},
 ): Promise<GaslessTransactionResult> {
 	const { waitForTransaction = true } = options;
-	const { client, smartAccountAddress } = await createGaslessClient(config);
+	const { bundlerClient, account, smartAccountAddress } =
+		await createGaslessClient(config);
 
 	console.log("[Gasless] Sending transaction...", {
 		from: smartAccountAddress,
-		to: call.target,
+		to: call.to,
 		value: (call.value ?? 0n).toString(),
 		hasData: call.data && call.data !== "0x",
 	});
 
-	const result = await client.sendUserOperation({
-		uo: {
-			target: call.target,
-			data: call.data ?? "0x",
-			value: call.value ?? 0n,
-		},
+	const hash = await bundlerClient.sendUserOperation({
+		account,
+		calls: [
+			{
+				to: call.to,
+				data: call.data ?? "0x",
+				value: call.value ?? 0n,
+			},
+		],
 	});
 
-	console.log("[Gasless] User operation submitted:", result.hash);
+	console.log("[Gasless] User operation submitted:", hash);
 
 	const response: GaslessTransactionResult = {
-		userOperationHash: result.hash,
+		userOperationHash: hash,
 		smartAccountAddress,
 	};
 
 	if (waitForTransaction) {
-		const txHash = await client.waitForUserOperationTransaction(result);
-		console.log("[Gasless] ✅ Transaction confirmed:", txHash);
-		response.transactionHash = txHash;
+		const receipt = await bundlerClient.waitForUserOperationReceipt({ hash });
+		console.log(
+			"[Gasless] ✅ Transaction confirmed:",
+			receipt.receipt.transactionHash,
+		);
+		response.transactionHash = receipt.receipt.transactionHash;
 	}
 
 	return response;
@@ -95,8 +102,8 @@ export async function sendGasless(
  * // Batch: approve + transfer
  * const result = await sendGaslessBatch(
  *   [
- *     { target: tokenAddress, data: approveCalldata },
- *     { target: bridgeAddress, data: depositCalldata }
+ *     { to: tokenAddress, data: approveCalldata },
+ *     { to: bridgeAddress, data: depositCalldata }
  *   ],
  *   { policyId: 'your-policy-id' }
  * );
@@ -108,36 +115,41 @@ export async function sendGaslessBatch(
 	options: SendGaslessOptions = {},
 ): Promise<GaslessTransactionResult> {
 	const { waitForTransaction = true } = options;
-	const { client, smartAccountAddress } = await createGaslessClient(config);
+	const { bundlerClient, account, smartAccountAddress } =
+		await createGaslessClient(config);
 
 	console.log("[Gasless] Sending batch transaction...", {
 		from: smartAccountAddress,
 		callCount: calls.length,
-		targets: calls.map((c) => c.target),
+		targets: calls.map((c) => c.to),
 	});
 
-	// Format calls for the smart account
+	// Format calls for the bundler client
 	const formattedCalls = calls.map((call) => ({
-		target: call.target,
+		to: call.to,
 		data: call.data ?? "0x",
 		value: call.value ?? 0n,
 	}));
 
-	const result = await client.sendUserOperation({
-		uo: formattedCalls,
+	const hash = await bundlerClient.sendUserOperation({
+		account,
+		calls: formattedCalls,
 	});
 
-	console.log("[Gasless] Batch user operation submitted:", result.hash);
+	console.log("[Gasless] Batch user operation submitted:", hash);
 
 	const response: GaslessTransactionResult = {
-		userOperationHash: result.hash,
+		userOperationHash: hash,
 		smartAccountAddress,
 	};
 
 	if (waitForTransaction) {
-		const txHash = await client.waitForUserOperationTransaction(result);
-		console.log("[Gasless] ✅ Batch transaction confirmed:", txHash);
-		response.transactionHash = txHash;
+		const receipt = await bundlerClient.waitForUserOperationReceipt({ hash });
+		console.log(
+			"[Gasless] ✅ Batch transaction confirmed:",
+			receipt.receipt.transactionHash,
+		);
+		response.transactionHash = receipt.receipt.transactionHash;
 	}
 
 	return response;
@@ -145,6 +157,7 @@ export async function sendGaslessBatch(
 
 /**
  * Checks if a transaction (or batch) would be eligible for gas sponsorship.
+ * Note: This performs a dry-run estimation to check eligibility.
  *
  * @param calls - Single call or array of calls to check
  * @param config - Client configuration (policyId required)
@@ -153,7 +166,7 @@ export async function sendGaslessBatch(
  * @example
  * ```ts
  * const { eligible } = await checkGaslessEligibility(
- *   { target: '0xContract', data: '0x...' },
+ *   { to: '0xContract', data: '0x...' },
  *   { policyId: 'your-policy-id' }
  * );
  * if (eligible) {
@@ -165,20 +178,28 @@ export async function checkGaslessEligibility(
 	calls: GaslessCall | GaslessCall[],
 	config: GaslessClientConfig,
 ): Promise<SponsorshipEligibility> {
-	const { client } = await createGaslessClient(config);
+	const { bundlerClient, account } = await createGaslessClient(config);
 	const callArray = Array.isArray(calls) ? calls : [calls];
 
 	const formattedCalls = callArray.map((call) => ({
-		target: call.target,
+		to: call.to,
 		data: call.data ?? "0x",
 		value: call.value ?? 0n,
 	}));
 
-	const uo = callArray.length === 1 ? formattedCalls[0] : formattedCalls;
-	const eligibility = await client.checkGasSponsorshipEligibility({ uo });
+	try {
+		// Try to estimate the user operation - if it succeeds with paymaster, it's eligible
+		await bundlerClient.prepareUserOperation({
+			account,
+			calls: formattedCalls,
+		});
 
-	console.log("[Gasless] Sponsorship eligibility:", eligibility);
-	return eligibility;
+		console.log("[Gasless] Sponsorship eligibility: true");
+		return { eligible: true };
+	} catch (error) {
+		console.log("[Gasless] Sponsorship eligibility: false", error);
+		return { eligible: false };
+	}
 }
 
 // =============================================================================
@@ -218,7 +239,7 @@ export async function sendGaslessErc20Transfer(
 		args: [params.to, params.amount],
 	});
 
-	return sendGasless({ target: params.token, data }, config, options);
+	return sendGasless({ to: params.token, data }, config, options);
 }
 
 /**
@@ -254,7 +275,7 @@ export async function sendGaslessErc20Approve(
 		args: [params.spender, params.amount],
 	});
 
-	return sendGasless({ target: params.token, data }, config, options);
+	return sendGasless({ to: params.token, data }, config, options);
 }
 
 /**
@@ -287,8 +308,8 @@ export async function sendGaslessApproveAndTransfer(
 
 	return sendGaslessBatch(
 		[
-			{ target: approveParams.token, data: approveData },
-			{ target: transferParams.token, data: transferData },
+			{ to: approveParams.token, data: approveData },
+			{ to: transferParams.token, data: transferData },
 		],
 		config,
 		options,
@@ -303,7 +324,7 @@ export async function sendGaslessApproveAndTransfer(
  * Sends a gasless contract call with encoded function data.
  * This is a convenience wrapper around sendGasless for contract interactions.
  *
- * @param target - The contract address
+ * @param to - The contract address
  * @param abi - The contract ABI
  * @param functionName - The function to call
  * @param args - The function arguments
@@ -323,7 +344,7 @@ export async function sendGaslessApproveAndTransfer(
  * ```
  */
 export async function sendGaslessContractCall(
-	target: Address,
+	to: Address,
 	// biome-ignore lint/suspicious/noExplicitAny: ABI type is complex
 	abi: readonly any[],
 	functionName: string,
@@ -340,7 +361,7 @@ export async function sendGaslessContractCall(
 		args,
 	});
 
-	return sendGasless({ target, data, value }, config, txOptions);
+	return sendGasless({ to, data, value }, config, txOptions);
 }
 
 /**
@@ -353,7 +374,7 @@ export async function sendGaslessContractCall(
 export async function sendGaslessTestTransaction(
 	policyId: string,
 ): Promise<GaslessTestResult> {
-	const { client, ownerAddress, smartAccountAddress } =
+	const { bundlerClient, account, ownerAddress, smartAccountAddress } =
 		await createGaslessClient({ policyId });
 
 	console.log("[GaslessTest] Sending 0 ETH from smart account to owner...", {
@@ -361,28 +382,31 @@ export async function sendGaslessTestTransaction(
 		to: ownerAddress,
 	});
 
-	const result = await client.sendUserOperation({
-		uo: {
-			target: ownerAddress,
-			data: "0x",
-			value: parseEther("0"),
-		},
+	const hash = await bundlerClient.sendUserOperation({
+		account,
+		calls: [
+			{
+				to: ownerAddress,
+				data: "0x",
+				value: parseEther("0"),
+			},
+		],
 	});
 
 	console.log("[GaslessTest] ✅ User operation submitted!", {
-		hash: result.hash,
+		hash,
 	});
 
-	const txHash = await client.waitForUserOperationTransaction(result);
+	const receipt = await bundlerClient.waitForUserOperationReceipt({ hash });
 
 	console.log("[GaslessTest] ✅ Transaction mined!", {
-		userOpHash: result.hash,
-		txHash,
+		userOpHash: hash,
+		txHash: receipt.receipt.transactionHash,
 	});
 
 	return {
-		userOperationHash: result.hash,
-		transactionHash: txHash,
+		userOperationHash: hash,
+		transactionHash: receipt.receipt.transactionHash,
 		smartAccountAddress,
 		ownerAddress,
 	};
