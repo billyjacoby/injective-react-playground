@@ -14,10 +14,13 @@ export function EoaBalances() {
 		fundWethAmount,
 		wrapEoaEthAmount,
 		unwrapEoaWethAmount,
+		peggyBridgeWethFromEOAAmount,
 		fundEth,
 		fundWeth,
 		wrapEthFromEoa,
 		unwrapWethFromEoa,
+		peggyBridgeWethFromEOA,
+		setPeggyBridgeWethFromEOAAmount,
 		setFundEthAmount,
 		setFundWethAmount,
 		setWrapEoaEthAmount,
@@ -85,23 +88,44 @@ export function EoaBalances() {
 						<div className="flex items-center gap-2">
 							<span className="w-28">WETH: {fmtEth(eoaBalances.weth)}</span>
 							{eoaBalances.weth > 0n && (
-								<>
-									<input
-										type="text"
-										value={fundWethAmount}
-										onChange={(e) => setFundWethAmount(e.target.value)}
-										className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs font-mono"
-										placeholder="0.001"
-									/>
-									<button
-										type="button"
-										onClick={fundWeth}
-										disabled={isProcessing}
-										className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
-									>
-										Send
-									</button>
-								</>
+								<div className="flex flex-col items-center gap-2">
+									<div className="flex items-center gap-2">
+										<input
+											type="text"
+											value={fundWethAmount}
+											onChange={(e) => setFundWethAmount(e.target.value)}
+											className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs font-mono"
+											placeholder="0.001"
+										/>
+										<button
+											type="button"
+											onClick={fundWeth}
+											disabled={isProcessing}
+											className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
+										>
+											Send
+										</button>
+									</div>
+									<div className="flex items-center gap-2">
+										<input
+											type="text"
+											value={peggyBridgeWethFromEOAAmount}
+											onChange={(e) =>
+												setPeggyBridgeWethFromEOAAmount(e.target.value)
+											}
+											className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs font-mono"
+											placeholder="0.001"
+										/>
+										<button
+											type="button"
+											onClick={peggyBridgeWethFromEOA}
+											disabled={isProcessing}
+											className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
+										>
+											Bridge → Injective
+										</button>
+									</div>
+								</div>
 							)}
 						</div>
 						{eoaBalances.weth > 0n && (

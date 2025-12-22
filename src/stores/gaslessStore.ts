@@ -1,3 +1,4 @@
+import { getInjectiveAddress } from "@injectivelabs/sdk-ts";
 import type { Address, Chain, PublicClient } from "viem";
 import {
 	createPublicClient,
@@ -6,13 +7,20 @@ import {
 	encodeFunctionData,
 	erc20Abi,
 	http,
+	maxUint256,
 	parseEther,
 	parseUnits,
+	publicActions,
 } from "viem";
 import { create } from "zustand";
 import { getAlchemyUrl, NETWORK } from "../constants/setup";
 import { usdtToken, wethToken } from "../constants/tokens";
 import { erc20WethAbi } from "../lib/contracts/Erc20WethContract";
+import {
+	getInjectivePeggyBridgeAddress,
+	PeggyContract,
+	peggyAbi,
+} from "../lib/contracts/PeggyContract";
 import { createGaslessClient, getDefaultConfig } from "../lib/gasless/client";
 import {
 	sendGasless,
@@ -40,6 +48,7 @@ type GaslessStore = {
 	isProcessing: boolean;
 	fundEthAmount: string;
 	fundWethAmount: string;
+	peggyBridgeWethFromEOAAmount: string;
 	withdrawEthAmount: string;
 	withdrawWethAmount: string;
 	withdrawUsdtAmount: string;
@@ -47,7 +56,6 @@ type GaslessStore = {
 	wrapSmartEthAmount: string;
 	unwrapEoaWethAmount: string;
 	unwrapSmartWethAmount: string;
-
 	// Clients (memoized)
 	chain: Chain;
 	publicClient: PublicClient;
@@ -65,6 +73,9 @@ type GaslessStore = {
 	wrapEthFromSmartAccount: () => Promise<void>;
 	unwrapWethFromEoa: () => Promise<void>;
 	unwrapWethFromSmartAccount: () => Promise<void>;
+	peggyBridgeWethFromEOA: () => Promise<void>;
+
+	setPeggyBridgeWethFromEOAAmount: (amount: string) => void;
 	setFundEthAmount: (amount: string) => void;
 	setFundWethAmount: (amount: string) => void;
 	setWithdrawEthAmount: (amount: string) => void;
@@ -101,7 +112,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	wrapSmartEthAmount: "0.001",
 	unwrapEoaWethAmount: "0.001",
 	unwrapSmartWethAmount: "0.001",
-
+	peggyBridgeWethFromEOAAmount: "0.001",
 	// Clients
 	chain,
 	publicClient,
@@ -456,6 +467,8 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				value: amount,
 			});
 
+			console.log("🪵 | hash:", hash);
+
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
 			await client.waitForTransactionReceipt({ hash });
 			set({ status: "ETH wrapped to WETH!", isProcessing: false });
@@ -613,7 +626,92 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
+	peggyBridgeWethFromEOA: async () => {
+		const { ownerAddress, eoaBalances, peggyBridgeWethFromEOAAmount } = get();
+		if (!ownerAddress || !window.ethereum || eoaBalances.weth === 0n) return;
+
+		const amount = parseEther(peggyBridgeWethFromEOAAmount);
+		if (amount > eoaBalances.weth) {
+			set({
+				status: "Insufficient WETH balance",
+				isProcessing: false,
+			});
+			return;
+		}
+		const chainConfig = getInjNetworkToChain(NETWORK);
+
+		const walletClient = createWalletClient({
+			chain: chainConfig,
+			transport: custom(window.ethereum),
+		}).extend(publicActions);
+
+		const [address] = await walletClient.getAddresses();
+
+		// Check the ERC20 allowance for the token
+		const allowance = await walletClient.readContract({
+			address: wethToken.address as Address,
+			abi: erc20Abi,
+			functionName: "allowance",
+			args: [ownerAddress, getInjectivePeggyBridgeAddress(NETWORK)],
+		});
+
+		if (allowance < amount || allowance !== maxUint256) {
+			const hash = await walletClient.writeContract({
+				account: ownerAddress,
+				address: wethToken.address as Address,
+				abi: erc20Abi,
+				functionName: "approve",
+				args: [getInjectivePeggyBridgeAddress(NETWORK), maxUint256],
+			});
+			set({ isProcessing: true, status: "Approving WETH allowance..." });
+			const result = await walletClient
+				.waitForTransactionReceipt({ hash })
+				.catch(() => {
+					set({
+						isProcessing: false,
+						status: "Failed to approve WETH allowance",
+					});
+					return null;
+				});
+			console.log("🪵 | result:", result);
+		}
+
+		const destinationBytes32 = PeggyContract.convertInjectiveAddressToBytes32(
+			getInjectiveAddress(address),
+		);
+
+		const hash = await walletClient.writeContract({
+			account: ownerAddress,
+			address: getInjectivePeggyBridgeAddress(NETWORK),
+			abi: peggyAbi,
+			functionName: "sendToInjective",
+			args: [wethToken.address as Address, destinationBytes32, amount, ""],
+		});
+		console.log("🪵 | hash:", hash);
+		set({ isProcessing: true, status: "Bridging WETH to Injective (EOA)..." });
+
+		const result2 = await walletClient
+			.waitForTransactionReceipt({ hash })
+			.then((receipt) => {
+				set({
+					isProcessing: false,
+					status: "WETH bridged to Injective (EOA)!",
+				});
+				return receipt;
+			})
+			.catch(() => {
+				set({
+					isProcessing: false,
+					status: "Failed to bridge WETH to Injective",
+				});
+				return null;
+			});
+		console.log("🪵 | result2:", result2);
+	},
+
 	// Setters for input amounts
+	setPeggyBridgeWethFromEOAAmount: (amount: string) =>
+		set({ peggyBridgeWethFromEOAAmount: amount }),
 	setFundEthAmount: (amount: string) => set({ fundEthAmount: amount }),
 	setFundWethAmount: (amount: string) => set({ fundWethAmount: amount }),
 	setWithdrawEthAmount: (amount: string) => set({ withdrawEthAmount: amount }),

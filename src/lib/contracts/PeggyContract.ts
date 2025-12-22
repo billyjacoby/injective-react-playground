@@ -23,7 +23,8 @@ export const getInjectivePeggyBridgeAddress = (network: Network) => {
 	}
 
 	if (isTestnet(network)) {
-		return "0x12e1181a741b70BE6A9D81f85af3E92B6ba41897";
+		// return "0x12e1181a741b70BE6A9D81f85af3E92B6ba41897";
+		return "0x69a8b9f6e25b8d2550c3abc41e84929feaa2cbaf";
 	}
 
 	return "0x430544ca09F7914077a0E8F405Da62292428F49D";
@@ -49,7 +50,7 @@ export class PeggyContract {
 	/**
 	 * Convert Injective bech32 address to bytes32 format for Peggy bridge
 	 */
-	private convertInjectiveAddressToBytes32(
+	public static convertInjectiveAddressToBytes32(
 		bech32Address: string,
 	): `0x${string}` {
 		try {
@@ -89,7 +90,7 @@ export class PeggyContract {
 
 		// Convert Injective bech32 address to bytes32
 		const destinationBytes32 =
-			this.convertInjectiveAddressToBytes32(destinationAddress);
+			PeggyContract.convertInjectiveAddressToBytes32(destinationAddress);
 
 		const calldata = encodeFunctionData({
 			abi: peggyAbi,
