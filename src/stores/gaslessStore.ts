@@ -1,5 +1,5 @@
 import { getInjectiveAddress } from "@injectivelabs/sdk-ts";
-import type { Address, Chain, PublicClient } from "viem";
+import type { Address, Chain, Hex, PublicClient } from "viem";
 import {
 	createPublicClient,
 	createWalletClient,
@@ -49,6 +49,7 @@ type GaslessStore = {
 	fundEthAmount: string;
 	fundWethAmount: string;
 	peggyBridgeWethFromEOAAmount: string;
+	peggyBridgeWethFromSmartAccountAmount: string;
 	withdrawEthAmount: string;
 	withdrawWethAmount: string;
 	withdrawUsdtAmount: string;
@@ -74,8 +75,10 @@ type GaslessStore = {
 	unwrapWethFromEoa: () => Promise<void>;
 	unwrapWethFromSmartAccount: () => Promise<void>;
 	peggyBridgeWethFromEOA: () => Promise<void>;
+	peggyBridgeWethFromSmartAccount: () => Promise<void>;
 
 	setPeggyBridgeWethFromEOAAmount: (amount: string) => void;
+	setPeggyBridgeWethFromSmartAccountAmount: (amount: string) => void;
 	setFundEthAmount: (amount: string) => void;
 	setFundWethAmount: (amount: string) => void;
 	setWithdrawEthAmount: (amount: string) => void;
@@ -113,6 +116,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	unwrapEoaWethAmount: "0.001",
 	unwrapSmartWethAmount: "0.001",
 	peggyBridgeWethFromEOAAmount: "0.001",
+	peggyBridgeWethFromSmartAccountAmount: "0.001",
 	// Clients
 	chain,
 	publicClient,
@@ -709,7 +713,110 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		console.log("🪵 | result2:", result2);
 	},
 
+	peggyBridgeWethFromSmartAccount: async () => {
+		const {
+			ownerAddress,
+			smartAccountAddress,
+			smartBalances,
+			peggyBridgeWethFromSmartAccountAmount,
+		} = get();
+		const { bundlerClient } = await createGaslessClient(getDefaultConfig());
+
+		if (!ownerAddress || !smartAccountAddress || smartBalances.weth === 0n) {
+			set({
+				status: "Insufficient WETH balance in smart account",
+				isProcessing: false,
+			});
+			return;
+		}
+
+		if (!window.ethereum) {
+			set({
+				status: "No wallet connected",
+				isProcessing: false,
+			});
+			return;
+		}
+
+		set({
+			isProcessing: true,
+			status: "Bridging WETH to Injective (gasless)...",
+		});
+
+		const chainConfig = getInjNetworkToChain(NETWORK);
+
+		const amount = parseEther(peggyBridgeWethFromSmartAccountAmount);
+
+		const walletClient = createWalletClient({
+			chain: chainConfig,
+			transport: custom(window.ethereum),
+		}).extend(publicActions);
+
+		const [address] = await walletClient.getAddresses();
+
+		const destinationBytes32 = PeggyContract.convertInjectiveAddressToBytes32(
+			getInjectiveAddress(address),
+		);
+
+		// Check the ERC20 allowance for the token
+		const allowance = await walletClient.readContract({
+			address: wethToken.address as Address,
+			abi: erc20Abi,
+			functionName: "allowance",
+			args: [smartAccountAddress, getInjectivePeggyBridgeAddress(NETWORK)],
+		});
+
+		let approveData: Hex | null = null;
+
+		if (allowance < amount || allowance !== maxUint256) {
+			set({ isProcessing: true, status: "Approving WETH allowance..." });
+			approveData = encodeFunctionData({
+				abi: erc20Abi,
+				functionName: "approve",
+				args: [getInjectivePeggyBridgeAddress(NETWORK), maxUint256],
+			});
+		}
+
+		const bridgeCallData = encodeFunctionData({
+			abi: peggyAbi,
+			functionName: "sendToInjective",
+			args: [wethToken.address as Address, destinationBytes32, amount, ""],
+		});
+
+		const hash = await bundlerClient.sendUserOperation({
+			calls: [
+				...(approveData
+					? [
+							{
+								data: approveData,
+								to: wethToken.address as Address,
+								value: 0n,
+							},
+						]
+					: []),
+				{
+					data: bridgeCallData,
+					to: getInjectivePeggyBridgeAddress(NETWORK),
+					value: 0n,
+				},
+			],
+		});
+
+		set({ status: `UserOp sent: ${hash.slice(0, 10)}...` });
+
+		const receipt = await bundlerClient.waitForUserOperationReceipt({ hash });
+		console.log("🪵 | receipt:", receipt);
+
+		set({
+			isProcessing: false,
+			status: "WETH bridged to Injective (gasless)!",
+		});
+		await get().fetchBalances();
+	},
+
 	// Setters for input amounts
+	setPeggyBridgeWethFromSmartAccountAmount: (amount: string) =>
+		set({ peggyBridgeWethFromSmartAccountAmount: amount }),
 	setPeggyBridgeWethFromEOAAmount: (amount: string) =>
 		set({ peggyBridgeWethFromEOAAmount: amount }),
 	setFundEthAmount: (amount: string) => set({ fundEthAmount: amount }),

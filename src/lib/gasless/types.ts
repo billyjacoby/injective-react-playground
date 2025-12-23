@@ -1,5 +1,5 @@
 import type { Address, Chain, Hex } from "viem";
-import type { SmartAccount } from "viem/account-abstraction";
+import type { BundlerClient, SmartAccount } from "viem/account-abstraction";
 import { mainnet, sepolia } from "viem/chains";
 
 /**
@@ -21,8 +21,7 @@ export type GaslessClientResult = {
 	/** The smart account instance */
 	account: SmartAccount;
 	/** The bundler client for sending user operations */
-	// biome-ignore lint/suspicious/noExplicitAny: BundlerClient type is complex
-	bundlerClient: any;
+	bundlerClient: BundlerClient;
 	/** The EOA address that owns the smart account */
 	ownerAddress: Address;
 	/** The smart account (contract) address */

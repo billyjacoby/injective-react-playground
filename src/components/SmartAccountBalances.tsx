@@ -14,10 +14,13 @@ export function SmartAccountBalances() {
 		withdrawWethAmount,
 		wrapSmartEthAmount,
 		unwrapSmartWethAmount,
+		peggyBridgeWethFromSmartAccountAmount,
+		setPeggyBridgeWethFromSmartAccountAmount,
 		withdrawEth,
 		withdrawWeth,
 		wrapEthFromSmartAccount,
 		unwrapWethFromSmartAccount,
+		peggyBridgeWethFromSmartAccount,
 		setWithdrawEthAmount,
 		setWithdrawWethAmount,
 		setWrapSmartEthAmount,
@@ -117,6 +120,25 @@ export function SmartAccountBalances() {
 										Unwrap → ETH (Gasless)
 									</button>
 								</div>
+							</div>
+							<div className="flex items-center gap-2">
+								<input
+									type="text"
+									value={peggyBridgeWethFromSmartAccountAmount}
+									onChange={(e) =>
+										setPeggyBridgeWethFromSmartAccountAmount(e.target.value)
+									}
+									className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs font-mono"
+									placeholder="0.001"
+								/>
+								<button
+									type="button"
+									onClick={peggyBridgeWethFromSmartAccount}
+									disabled={isProcessing}
+									className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
+								>
+									Bridge → Injective
+								</button>
 							</div>
 						</div>
 					)}
