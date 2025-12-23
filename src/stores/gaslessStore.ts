@@ -1,19 +1,17 @@
 import { getInjectiveAddress } from "@injectivelabs/sdk-ts";
-import type { Address, Chain, Hex, PublicClient } from "viem";
+import type { Address, Chain, Hex, PublicClient, WalletClient } from "viem";
 import {
-	createPublicClient,
 	createWalletClient,
 	custom,
 	encodeFunctionData,
 	erc20Abi,
-	http,
 	maxUint256,
 	parseEther,
-	parseUnits,
 	publicActions,
 } from "viem";
+import { BundlerClient, SmartAccount } from "viem/account-abstraction";
 import { create } from "zustand";
-import { getAlchemyUrl, NETWORK } from "../constants/setup";
+import { NETWORK } from "../constants/setup";
 import { usdtToken, wethToken } from "../constants/tokens";
 import { erc20WethAbi } from "../lib/contracts/Erc20WethContract";
 import {
@@ -21,11 +19,9 @@ import {
 	PeggyContract,
 	peggyAbi,
 } from "../lib/contracts/PeggyContract";
-import { createGaslessClient, getDefaultConfig } from "../lib/gasless/client";
-import {
-	sendGasless,
-	sendGaslessErc20Transfer,
-} from "../lib/gasless/transactions";
+import { getDefaultConfig, getGaslessClient } from "../lib/gasless/client";
+import { sendGasless } from "../lib/gasless/transactions";
+import { handleCommonErrors } from "../lib/utils/common-errors";
 import { getInjNetworkToChain } from "../lib/utils/network";
 
 type Balances = {
@@ -46,55 +42,30 @@ type GaslessStore = {
 	isLoading: boolean;
 	status: string;
 	isProcessing: boolean;
-	fundEthAmount: string;
-	fundWethAmount: string;
-	peggyBridgeWethFromEOAAmount: string;
-	peggyBridgeWethFromSmartAccountAmount: string;
-	withdrawEthAmount: string;
-	withdrawWethAmount: string;
-	withdrawUsdtAmount: string;
-	wrapEoaEthAmount: string;
-	wrapSmartEthAmount: string;
-	unwrapEoaWethAmount: string;
-	unwrapSmartWethAmount: string;
-	// Clients (memoized)
 	chain: Chain;
-	publicClient: PublicClient;
+
+	// Clients (memoized)
+	smartAccount: SmartAccount | null;
+	bundlerClient: BundlerClient | null;
+	walletClient: (WalletClient & PublicClient) | null;
 
 	// Actions
 	connectWallet: () => Promise<void>;
 	fetchBalances: () => Promise<void>;
 	testGasless: () => Promise<void>;
-	fundEth: () => Promise<void>;
-	fundWeth: () => Promise<void>;
-	withdrawEth: () => Promise<void>;
-	withdrawWeth: () => Promise<void>;
-	withdrawUsdt: () => Promise<void>;
-	wrapEthFromEoa: () => Promise<void>;
-	wrapEthFromSmartAccount: () => Promise<void>;
-	unwrapWethFromEoa: () => Promise<void>;
-	unwrapWethFromSmartAccount: () => Promise<void>;
-	peggyBridgeWethFromEOA: () => Promise<void>;
-	peggyBridgeWethFromSmartAccount: () => Promise<void>;
-
-	setPeggyBridgeWethFromEOAAmount: (amount: string) => void;
-	setPeggyBridgeWethFromSmartAccountAmount: (amount: string) => void;
-	setFundEthAmount: (amount: string) => void;
-	setFundWethAmount: (amount: string) => void;
-	setWithdrawEthAmount: (amount: string) => void;
-	setWithdrawWethAmount: (amount: string) => void;
-	setWithdrawUsdtAmount: (amount: string) => void;
-	setWrapEoaEthAmount: (amount: string) => void;
-	setWrapSmartEthAmount: (amount: string) => void;
-	setUnwrapEoaWethAmount: (amount: string) => void;
-	setUnwrapSmartWethAmount: (amount: string) => void;
+	fundEth: (amount: string) => Promise<void>;
+	fundWeth: (amount: string) => Promise<void>;
+	withdrawEth: (amount?: string) => Promise<void>;
+	withdrawWeth: (amount?: string) => Promise<void>;
+	wrapEthFromEoa: (amount: string) => Promise<void>;
+	wrapEthFromSmartAccount: (amount?: string) => Promise<void>;
+	unwrapWethFromEoa: (amount?: string) => Promise<void>;
+	unwrapWethFromSmartAccount: (amount?: string) => Promise<void>;
+	peggyBridgeWethFromEOA: (amount: string) => Promise<void>;
+	peggyBridgeWethFromSmartAccount: (amount?: string) => Promise<void>;
 };
 
 const chain = getInjNetworkToChain(NETWORK);
-const publicClient = createPublicClient({
-	chain,
-	transport: http(getAlchemyUrl(NETWORK)),
-});
 
 export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	// Initial state
@@ -106,46 +77,41 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	isLoading: false,
 	status: "",
 	isProcessing: false,
-	fundEthAmount: "0.001",
-	fundWethAmount: "0.001",
-	withdrawEthAmount: "0.001",
-	withdrawWethAmount: "0.001",
-	withdrawUsdtAmount: "10",
-	wrapEoaEthAmount: "0.001",
-	wrapSmartEthAmount: "0.001",
-	unwrapEoaWethAmount: "0.001",
-	unwrapSmartWethAmount: "0.001",
-	peggyBridgeWethFromEOAAmount: "0.001",
-	peggyBridgeWethFromSmartAccountAmount: "0.001",
-	// Clients
 	chain,
-	publicClient,
+
+	// Clients
+	smartAccount: null,
+	bundlerClient: null,
+	walletClient: null,
 
 	// Actions
 	connectWallet: async () => {
-		if (!window.ethereum) {
-			set({ status: "Please install Rabby or MetaMask" });
+		const config = getDefaultConfig();
+
+		const error = handleCommonErrors(config);
+
+		if (error) {
+			set({ status: error });
 			return;
 		}
 
 		set({ isConnecting: true, status: "Connecting..." });
 
 		try {
-			const config = getDefaultConfig();
-			if (!config.policyId) {
-				set({
-					status: "Missing VITE_ALCHEMY_GAS_POLICY_ID env var",
-					isConnecting: false,
-				});
-				return;
-			}
-
-			const { ownerAddress: owner, smartAccountAddress: smartAccount } =
-				await createGaslessClient(config);
+			const {
+				smartAccount,
+				bundlerClient,
+				ownerAddress,
+				smartAccountAddress,
+				walletClient,
+			} = await getGaslessClient(config);
 
 			set({
-				ownerAddress: owner,
-				smartAccountAddress: smartAccount,
+				smartAccount,
+				bundlerClient,
+				ownerAddress,
+				smartAccountAddress,
+				walletClient,
 				status: "",
 				isConnecting: false,
 			});
@@ -159,14 +125,14 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	},
 
 	fetchBalances: async () => {
-		const { ownerAddress, smartAccountAddress, publicClient: client } = get();
-		if (!ownerAddress || !smartAccountAddress) return;
+		const { ownerAddress, smartAccountAddress, walletClient } = get();
+		if (!ownerAddress || !smartAccountAddress || !walletClient) return;
 
 		set({ isLoading: true });
 
 		const safeErc20Balance = async (token: Address, account: Address) => {
 			try {
-				return (await client.readContract({
+				return (await walletClient.readContract({
 					address: token,
 					abi: erc20Abi,
 					functionName: "balanceOf",
@@ -180,10 +146,10 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		try {
 			const [eoaEth, eoaWeth, eoaUsdt, smartEth, smartWeth, smartUsdt] =
 				await Promise.all([
-					client.getBalance({ address: ownerAddress }),
+					walletClient.getBalance({ address: ownerAddress }),
 					safeErc20Balance(wethToken.address as Address, ownerAddress),
 					safeErc20Balance(usdtToken.address as Address, ownerAddress),
-					client.getBalance({ address: smartAccountAddress }),
+					walletClient.getBalance({ address: smartAccountAddress }),
 					safeErc20Balance(wethToken.address as Address, smartAccountAddress),
 					safeErc20Balance(usdtToken.address as Address, smartAccountAddress),
 				]);
@@ -200,8 +166,14 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	},
 
 	testGasless: async () => {
-		const { ownerAddress, smartAccountAddress } = get();
-		if (!ownerAddress || !smartAccountAddress) return;
+		const { ownerAddress, smartAccountAddress, walletClient } = get();
+		if (
+			!ownerAddress ||
+			!smartAccountAddress ||
+			!walletClient ||
+			!walletClient.account
+		)
+			return;
 
 		set({
 			isProcessing: true,
@@ -212,7 +184,14 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			const config = getDefaultConfig();
 			if (!config.policyId) throw new Error("Missing policy ID");
 
-			await sendGasless({ to: ownerAddress, value: 0n }, config);
+			const hashedData = await walletClient.signTransaction({
+				account: walletClient.account,
+				chain,
+				to: ownerAddress,
+				value: 0n,
+			});
+
+			await sendGasless({ to: ownerAddress, data: hashedData });
 			set({ status: "Test gasless tx successful!", isProcessing: false });
 		} catch (error) {
 			console.error("Test gasless error:", error);
@@ -223,25 +202,14 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	fundEth: async () => {
-		const {
-			ownerAddress,
-			smartAccountAddress,
-			eoaBalances,
-			fundEthAmount,
-			chain: chainConfig,
-			publicClient: client,
-		} = get();
-		if (!ownerAddress || !smartAccountAddress || !window.ethereum) return;
+	fundEth: async (fundEthAmount: string) => {
+		const { ownerAddress, smartAccountAddress, eoaBalances, walletClient } =
+			get();
+		if (!ownerAddress || !smartAccountAddress || !walletClient) return;
 
 		set({ isProcessing: true, status: "Sending ETH to smart account..." });
 
 		try {
-			const walletClient = createWalletClient({
-				chain: chainConfig,
-				transport: custom(window.ethereum),
-			});
-
 			const amount = parseEther(fundEthAmount);
 			if (amount > eoaBalances.eth) {
 				set({
@@ -255,10 +223,11 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				account: ownerAddress,
 				to: smartAccountAddress,
 				value: amount,
+				chain,
 			});
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await client.waitForTransactionReceipt({ hash });
+			await walletClient.waitForTransactionReceipt({ hash });
 			set({ status: "ETH sent to smart account!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
@@ -270,24 +239,20 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	fundWeth: async () => {
-		const {
-			ownerAddress,
-			smartAccountAddress,
-			eoaBalances,
-			fundWethAmount,
-			publicClient: client,
-		} = get();
-		if (!ownerAddress || !smartAccountAddress || !window.ethereum) return;
+	fundWeth: async (fundWethAmount: string) => {
+		const { ownerAddress, smartAccountAddress, eoaBalances, walletClient } =
+			get();
+		if (
+			!ownerAddress ||
+			!smartAccountAddress ||
+			!window.ethereum ||
+			!walletClient
+		)
+			return;
 
 		set({ isProcessing: true, status: "Sending WETH to smart account..." });
 
 		try {
-			const walletClient = createWalletClient({
-				chain,
-				transport: custom(window.ethereum),
-			});
-
 			const amount = parseEther(fundWethAmount);
 			if (amount > eoaBalances.weth) {
 				set({
@@ -303,10 +268,11 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				abi: erc20Abi,
 				functionName: "transfer",
 				args: [smartAccountAddress, amount],
+				chain,
 			});
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await client.waitForTransactionReceipt({ hash });
+			await walletClient.waitForTransactionReceipt({ hash });
 			set({ status: "WETH sent to smart account!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
@@ -318,23 +284,23 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	withdrawEth: async () => {
-		const {
-			ownerAddress,
-			smartAccountAddress,
-			smartBalances,
-			withdrawEthAmount,
-		} = get();
-		if (!ownerAddress || !smartAccountAddress || smartBalances.eth === 0n)
+	withdrawEth: async (withdrawEthAmount?: string) => {
+		const { ownerAddress, smartAccountAddress, smartBalances, walletClient } =
+			get();
+		if (
+			!ownerAddress ||
+			!smartAccountAddress ||
+			smartBalances.eth === 0n ||
+			!walletClient
+		)
 			return;
 
 		set({ isProcessing: true, status: "Withdrawing ETH (gasless)..." });
 
 		try {
-			const config = getDefaultConfig();
-			if (!config.policyId) throw new Error("Missing policy ID");
-
-			const amount = parseEther(withdrawEthAmount);
+			const amount = withdrawEthAmount
+				? parseEther(withdrawEthAmount)
+				: smartBalances.eth;
 			if (amount > smartBalances.eth) {
 				set({
 					status: "Insufficient ETH in smart account",
@@ -343,7 +309,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				return;
 			}
 
-			await sendGasless({ to: ownerAddress, value: amount }, config);
+			await sendGasless({ to: ownerAddress, value: amount });
 			set({ status: "ETH withdrawn (gasless)!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
@@ -355,14 +321,15 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	withdrawWeth: async () => {
-		const {
-			ownerAddress,
-			smartAccountAddress,
-			smartBalances,
-			withdrawWethAmount,
-		} = get();
-		if (!ownerAddress || !smartAccountAddress || smartBalances.weth === 0n)
+	withdrawWeth: async (withdrawWethAmount?: string) => {
+		const { ownerAddress, smartAccountAddress, smartBalances, walletClient } =
+			get();
+		if (
+			!ownerAddress ||
+			!smartAccountAddress ||
+			smartBalances.weth === 0n ||
+			!walletClient
+		)
 			return;
 
 		set({ isProcessing: true, status: "Withdrawing WETH (gasless)..." });
@@ -371,7 +338,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			const config = getDefaultConfig();
 			if (!config.policyId) throw new Error("Missing policy ID");
 
-			const amount = parseEther(withdrawWethAmount);
+			const amount = withdrawWethAmount
+				? parseEther(withdrawWethAmount)
+				: smartBalances.weth;
 			if (amount > smartBalances.weth) {
 				set({
 					status: "Insufficient WETH in smart account",
@@ -380,10 +349,16 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				return;
 			}
 
-			await sendGaslessErc20Transfer(
-				{ token: wethToken.address as Address, to: ownerAddress, amount },
-				config,
-			);
+			const transferCalldata = encodeFunctionData({
+				abi: erc20Abi,
+				functionName: "transfer",
+				args: [ownerAddress, amount],
+			});
+
+			await sendGasless({
+				to: wethToken.address as Address,
+				data: transferCalldata,
+			});
 			set({ status: "WETH withdrawn (gasless)!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
@@ -395,64 +370,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	withdrawUsdt: async () => {
-		const {
-			ownerAddress,
-			smartAccountAddress,
-			smartBalances,
-			withdrawUsdtAmount,
-		} = get();
-		if (!ownerAddress || !smartAccountAddress || smartBalances.usdt === 0n)
+	wrapEthFromEoa: async (wrapEoaEthAmount: string) => {
+		const { ownerAddress, eoaBalances, walletClient } = get();
+		if (
+			!ownerAddress ||
+			!window.ethereum ||
+			eoaBalances.eth === 0n ||
+			!walletClient
+		)
 			return;
-
-		set({ isProcessing: true, status: "Withdrawing USDT (gasless)..." });
-
-		try {
-			const config = getDefaultConfig();
-			if (!config.policyId) throw new Error("Missing policy ID");
-
-			const amount = parseUnits(withdrawUsdtAmount, 6);
-			if (amount > smartBalances.usdt) {
-				set({
-					status: "Insufficient USDT in smart account",
-					isProcessing: false,
-				});
-				return;
-			}
-
-			await sendGaslessErc20Transfer(
-				{ token: usdtToken.address as Address, to: ownerAddress, amount },
-				config,
-			);
-			set({ status: "USDT withdrawn (gasless)!", isProcessing: false });
-			await get().fetchBalances();
-		} catch (error) {
-			console.error("Withdraw USDT error:", error);
-			set({
-				status: error instanceof Error ? error.message : "Withdraw failed",
-				isProcessing: false,
-			});
-		}
-	},
-
-	wrapEthFromEoa: async () => {
-		const {
-			ownerAddress,
-			eoaBalances,
-			wrapEoaEthAmount,
-			chain: chainConfig,
-			publicClient: client,
-		} = get();
-		if (!ownerAddress || !window.ethereum || eoaBalances.eth === 0n) return;
 
 		set({ isProcessing: true, status: "Wrapping ETH to WETH (EOA)..." });
 
 		try {
-			const walletClient = createWalletClient({
-				chain: chainConfig,
-				transport: custom(window.ethereum),
-			});
-
 			const amount = parseEther(wrapEoaEthAmount);
 			if (amount > eoaBalances.eth) {
 				set({
@@ -469,12 +399,13 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				functionName: "deposit",
 				args: [],
 				value: amount,
+				chain,
 			});
 
 			console.log("🪵 | hash:", hash);
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await client.waitForTransactionReceipt({ hash });
+			await walletClient.waitForTransactionReceipt({ hash });
 			set({ status: "ETH wrapped to WETH!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
@@ -486,8 +417,8 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	wrapEthFromSmartAccount: async () => {
-		const { smartBalances, wrapSmartEthAmount } = get();
+	wrapEthFromSmartAccount: async (wrapSmartEthAmount?: string) => {
+		const { smartBalances } = get();
 		if (!smartBalances.eth || smartBalances.eth === 0n) return;
 
 		set({
@@ -499,7 +430,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			const config = getDefaultConfig();
 			if (!config.policyId) throw new Error("Missing policy ID");
 
-			const amount = parseEther(wrapSmartEthAmount);
+			const amount = wrapSmartEthAmount
+				? parseEther(wrapSmartEthAmount)
+				: smartBalances.eth;
 			if (amount > smartBalances.eth) {
 				set({
 					status: "Insufficient ETH in smart account",
@@ -514,14 +447,11 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				args: [],
 			});
 
-			await sendGasless(
-				{
-					to: wethToken.address as Address,
-					data: depositCalldata,
-					value: amount,
-				},
-				config,
-			);
+			await sendGasless({
+				to: wethToken.address as Address,
+				data: depositCalldata,
+				value: amount,
+			});
 
 			set({ status: "ETH wrapped to WETH (gasless)!", isProcessing: false });
 			await get().fetchBalances();
@@ -534,25 +464,22 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	unwrapWethFromEoa: async () => {
-		const {
-			ownerAddress,
-			eoaBalances,
-			unwrapEoaWethAmount,
-			chain: chainConfig,
-			publicClient: client,
-		} = get();
-		if (!ownerAddress || !window.ethereum || eoaBalances.weth === 0n) return;
+	unwrapWethFromEoa: async (unwrapEoaWethAmount?: string) => {
+		const { ownerAddress, eoaBalances, walletClient } = get();
+		if (
+			!ownerAddress ||
+			!window.ethereum ||
+			eoaBalances.weth === 0n ||
+			!walletClient
+		)
+			return;
 
 		set({ isProcessing: true, status: "Unwrapping WETH to ETH (EOA)..." });
 
 		try {
-			const walletClient = createWalletClient({
-				chain: chainConfig,
-				transport: custom(window.ethereum),
-			});
-
-			const amount = parseEther(unwrapEoaWethAmount);
+			const amount = unwrapEoaWethAmount
+				? parseEther(unwrapEoaWethAmount)
+				: eoaBalances.weth;
 			if (amount > eoaBalances.weth) {
 				set({
 					status: "Insufficient WETH balance",
@@ -567,10 +494,11 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				abi: erc20WethAbi,
 				functionName: "withdraw",
 				args: [amount],
+				chain,
 			});
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await client.waitForTransactionReceipt({ hash });
+			await walletClient.waitForTransactionReceipt({ hash });
 			set({ status: "WETH unwrapped to ETH!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
@@ -582,8 +510,8 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	unwrapWethFromSmartAccount: async () => {
-		const { smartBalances, unwrapSmartWethAmount } = get();
+	unwrapWethFromSmartAccount: async (unwrapSmartWethAmount?: string) => {
+		const { smartBalances } = get();
 		if (!smartBalances.weth || smartBalances.weth === 0n) return;
 
 		set({
@@ -595,7 +523,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			const config = getDefaultConfig();
 			if (!config.policyId) throw new Error("Missing policy ID");
 
-			const amount = parseEther(unwrapSmartWethAmount);
+			const amount = unwrapSmartWethAmount
+				? parseEther(unwrapSmartWethAmount)
+				: smartBalances.weth;
 			if (amount > smartBalances.weth) {
 				set({
 					status: "Insufficient WETH in smart account",
@@ -610,14 +540,10 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				args: [amount],
 			});
 
-			await sendGasless(
-				{
-					to: wethToken.address as Address,
-					data: withdrawCalldata,
-					value: 0n,
-				},
-				config,
-			);
+			await sendGasless({
+				to: wethToken.address as Address,
+				data: withdrawCalldata,
+			});
 
 			set({ status: "WETH unwrapped to ETH (gasless)!", isProcessing: false });
 			await get().fetchBalances();
@@ -630,8 +556,8 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	peggyBridgeWethFromEOA: async () => {
-		const { ownerAddress, eoaBalances, peggyBridgeWethFromEOAAmount } = get();
+	peggyBridgeWethFromEOA: async (peggyBridgeWethFromEOAAmount: string) => {
+		const { ownerAddress, eoaBalances } = get();
 		if (!ownerAddress || !window.ethereum || eoaBalances.weth === 0n) return;
 
 		const amount = parseEther(peggyBridgeWethFromEOAAmount);
@@ -713,14 +639,11 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		console.log("🪵 | result2:", result2);
 	},
 
-	peggyBridgeWethFromSmartAccount: async () => {
-		const {
-			ownerAddress,
-			smartAccountAddress,
-			smartBalances,
-			peggyBridgeWethFromSmartAccountAmount,
-		} = get();
-		const { bundlerClient } = await createGaslessClient(getDefaultConfig());
+	peggyBridgeWethFromSmartAccount: async (
+		peggyBridgeWethFromSmartAccountAmount?: string,
+	) => {
+		const { ownerAddress, smartAccountAddress, smartBalances } = get();
+		const { bundlerClient } = await getGaslessClient(getDefaultConfig());
 
 		if (!ownerAddress || !smartAccountAddress || smartBalances.weth === 0n) {
 			set({
@@ -745,7 +668,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 		const chainConfig = getInjNetworkToChain(NETWORK);
 
-		const amount = parseEther(peggyBridgeWethFromSmartAccountAmount);
+		const amount = peggyBridgeWethFromSmartAccountAmount
+			? parseEther(peggyBridgeWethFromSmartAccountAmount)
+			: smartBalances.weth;
 
 		const walletClient = createWalletClient({
 			chain: chainConfig,
@@ -783,6 +708,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			args: [wethToken.address as Address, destinationBytes32, amount, ""],
 		});
 
+		bundlerClient.batch = {
+			multicall: true,
+		};
 		const hash = await bundlerClient.sendUserOperation({
 			calls: [
 				...(approveData
@@ -813,24 +741,4 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		});
 		await get().fetchBalances();
 	},
-
-	// Setters for input amounts
-	setPeggyBridgeWethFromSmartAccountAmount: (amount: string) =>
-		set({ peggyBridgeWethFromSmartAccountAmount: amount }),
-	setPeggyBridgeWethFromEOAAmount: (amount: string) =>
-		set({ peggyBridgeWethFromEOAAmount: amount }),
-	setFundEthAmount: (amount: string) => set({ fundEthAmount: amount }),
-	setFundWethAmount: (amount: string) => set({ fundWethAmount: amount }),
-	setWithdrawEthAmount: (amount: string) => set({ withdrawEthAmount: amount }),
-	setWithdrawWethAmount: (amount: string) =>
-		set({ withdrawWethAmount: amount }),
-	setWithdrawUsdtAmount: (amount: string) =>
-		set({ withdrawUsdtAmount: amount }),
-	setWrapEoaEthAmount: (amount: string) => set({ wrapEoaEthAmount: amount }),
-	setWrapSmartEthAmount: (amount: string) =>
-		set({ wrapSmartEthAmount: amount }),
-	setUnwrapEoaWethAmount: (amount: string) =>
-		set({ unwrapEoaWethAmount: amount }),
-	setUnwrapSmartWethAmount: (amount: string) =>
-		set({ unwrapSmartWethAmount: amount }),
 }));

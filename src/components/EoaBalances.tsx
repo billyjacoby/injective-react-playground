@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { formatEther } from "viem";
+import { useShallow } from "zustand/shallow";
 import { useGaslessStore } from "../stores/gaslessStore";
 
 function fmtEth(v: bigint) {
@@ -10,22 +12,30 @@ export function EoaBalances() {
 		eoaBalances,
 		isLoading,
 		isProcessing,
-		fundEthAmount,
-		fundWethAmount,
-		wrapEoaEthAmount,
-		unwrapEoaWethAmount,
-		peggyBridgeWethFromEOAAmount,
 		fundEth,
 		fundWeth,
 		wrapEthFromEoa,
 		unwrapWethFromEoa,
 		peggyBridgeWethFromEOA,
-		setPeggyBridgeWethFromEOAAmount,
-		setFundEthAmount,
-		setFundWethAmount,
-		setWrapEoaEthAmount,
-		setUnwrapEoaWethAmount,
-	} = useGaslessStore();
+	} = useGaslessStore(
+		useShallow((state) => ({
+			eoaBalances: state.eoaBalances,
+			isLoading: state.isLoading,
+			isProcessing: state.isProcessing,
+			fundEth: state.fundEth,
+			fundWeth: state.fundWeth,
+			wrapEthFromEoa: state.wrapEthFromEoa,
+			unwrapWethFromEoa: state.unwrapWethFromEoa,
+			peggyBridgeWethFromEOA: state.peggyBridgeWethFromEOA,
+		})),
+	);
+
+	const [fundEthAmount, setFundEthAmount] = useState("0.001");
+	const [fundWethAmount, setFundWethAmount] = useState("0.001");
+	const [wrapEoaEthAmount, setWrapEoaEthAmount] = useState("0.001");
+	const [unwrapEoaWethAmount, setUnwrapEoaWethAmount] = useState("0.001");
+	const [peggyBridgeWethFromEOAAmount, setPeggyBridgeWethFromEOAAmount] =
+		useState("0.001");
 
 	return (
 		<div className="bg-gray-800 rounded-lg p-4">
@@ -54,7 +64,7 @@ export function EoaBalances() {
 									/>
 									<button
 										type="button"
-										onClick={fundEth}
+										onClick={() => fundEth(fundEthAmount)}
 										disabled={isProcessing}
 										className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 									>
@@ -74,7 +84,7 @@ export function EoaBalances() {
 								/>
 								<button
 									type="button"
-									onClick={wrapEthFromEoa}
+									onClick={() => wrapEthFromEoa(wrapEoaEthAmount)}
 									disabled={isProcessing}
 									className="py-1 px-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 								>
@@ -99,7 +109,7 @@ export function EoaBalances() {
 										/>
 										<button
 											type="button"
-											onClick={fundWeth}
+											onClick={() => fundWeth(fundWethAmount)}
 											disabled={isProcessing}
 											className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 										>
@@ -118,7 +128,9 @@ export function EoaBalances() {
 										/>
 										<button
 											type="button"
-											onClick={peggyBridgeWethFromEOA}
+											onClick={() =>
+												peggyBridgeWethFromEOA(peggyBridgeWethFromEOAAmount)
+											}
 											disabled={isProcessing}
 											className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 										>
@@ -139,7 +151,7 @@ export function EoaBalances() {
 								/>
 								<button
 									type="button"
-									onClick={unwrapWethFromEoa}
+									onClick={() => unwrapWethFromEoa(unwrapEoaWethAmount)}
 									disabled={isProcessing}
 									className="py-1 px-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 								>

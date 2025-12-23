@@ -1,15 +1,8 @@
 import { toLightSmartAccount } from "permissionless/accounts";
-import {
-	type Address,
-	createPublicClient,
-	createWalletClient,
-	custom,
-	http,
-} from "viem";
+import { createWalletClient, custom, http, publicActions } from "viem";
 import {
 	createBundlerClient,
 	createPaymasterClient,
-	type SmartAccount,
 } from "viem/account-abstraction";
 import { toAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
@@ -65,7 +58,7 @@ function getAlchemyRpcUrl(chainId: number, apiKey: string): string {
  * });
  * ```
  */
-export async function createGaslessClient(
+async function createGaslessClient(
 	config: GaslessClientConfig,
 ): Promise<GaslessClientResult> {
 	const defaults = getDefaultConfig();
@@ -78,6 +71,12 @@ export async function createGaslessClient(
 		);
 	}
 
+	if (!config.policyId) {
+		throw new Error(
+			"Gas Manager Policy ID is required. Set VITE_ALCHEMY_GAS_POLICY_ID or VITE_ALCHEMY_GAS_POLICY_ID_SEPOLIA",
+		);
+	}
+
 	// Ensure we have an ethereum provider (Rabby/MetaMask)
 	if (!window.ethereum) {
 		throw new Error(
@@ -87,20 +86,15 @@ export async function createGaslessClient(
 
 	const rpcUrl = getAlchemyRpcUrl(chain.id, apiKey);
 
-	// Create a public client for reading chain state
-	const publicClient = createPublicClient({
-		chain,
-		transport: http(rpcUrl),
-	});
-
 	// Create a wallet client from the browser's ethereum provider
 	const walletClient = createWalletClient({
 		chain,
 		transport: custom(window.ethereum),
-	});
+	}).extend(publicActions);
 
 	// Get connected accounts - this may trigger a connection popup
 	const [address] = await walletClient.getAddresses();
+
 	if (!address) {
 		throw new Error("No account connected. Please connect your wallet first.");
 	}
@@ -136,11 +130,8 @@ export async function createGaslessClient(
 		policyId: config.policyId,
 	});
 
-	// Create the Light Account using permissionless.js
-	// Type assertion needed due to viem version differences in permissionless
-	const account = await toLightSmartAccount({
-		// biome-ignore lint/suspicious/noExplicitAny: Client type mismatch between viem versions
-		client: publicClient as any,
+	const smartAccount = await toLightSmartAccount({
+		client: walletClient,
 		owner,
 		version: "2.0.0",
 	});
@@ -153,23 +144,27 @@ export async function createGaslessClient(
 	// Minimum gas prices required by Alchemy's bundler (0.1 gwei)
 	const MIN_PRIORITY_FEE = 100_000_000n; // 0.1 gwei in wei
 	const MIN_MAX_FEE = 100_000_000n; // 0.1 gwei in wei
+	// Buffer to account for gas price fluctuations between estimation and submission
+	const GAS_FEE_BUFFER_PERCENT = 50n;
 
-	// Create the bundler client with paymaster for sponsored transactions
-	// Alchemy requires the policyId to be passed in the paymaster context
 	const bundlerClient = createBundlerClient({
-		// biome-ignore lint/suspicious/noExplicitAny: SmartAccount type mismatch between viem versions
-		account: account as any as SmartAccount,
-		client: publicClient,
+		account: smartAccount,
+		client: walletClient,
 		paymaster: paymasterClient,
 		paymasterContext: {
 			policyId: config.policyId,
 		},
-		transport: http(rpcUrl),
+		transport: http(rpcUrl, {
+			batch: {
+				batchSize: 10,
+				wait: 1000,
+			},
+		}),
 		// Custom fee estimation to ensure minimum gas prices for Alchemy's bundler
 		userOperation: {
 			estimateFeesPerGas: async () => {
 				// Get the current fee data from the chain
-				const feeData = await publicClient.estimateFeesPerGas();
+				const feeData = await walletClient.estimateFeesPerGas();
 
 				// Ensure we meet the bundler's minimum requirements
 				const maxPriorityFeePerGas =
@@ -178,10 +173,15 @@ export async function createGaslessClient(
 						? feeData.maxPriorityFeePerGas
 						: MIN_PRIORITY_FEE;
 
-				const maxFeePerGas =
+				// Calculate base maxFeePerGas
+				const baseMaxFeePerGas =
 					feeData.maxFeePerGas && feeData.maxFeePerGas > MIN_MAX_FEE
 						? feeData.maxFeePerGas
 						: MIN_MAX_FEE + maxPriorityFeePerGas;
+
+				// Add buffer to account for gas price volatility between estimation and submission
+				const maxFeePerGas =
+					baseMaxFeePerGas + (baseMaxFeePerGas * GAS_FEE_BUFFER_PERCENT) / 100n;
 
 				return {
 					maxFeePerGas,
@@ -192,15 +192,27 @@ export async function createGaslessClient(
 	});
 
 	console.log("[GaslessClient] ✅ Client created!", {
-		smartAccountAddress: account.address,
+		smartAccountAddress: smartAccount.address,
 		ownerAddress: address,
 	});
 
 	return {
-		// biome-ignore lint/suspicious/noExplicitAny: SmartAccount type mismatch between viem versions
-		account: account as any as SmartAccount,
+		smartAccount,
 		bundlerClient,
-		ownerAddress: address as Address,
-		smartAccountAddress: account.address,
+		ownerAddress: address,
+		smartAccountAddress: smartAccount.address,
+		walletClient,
 	};
+}
+
+let gaslessClient: GaslessClientResult | null = null;
+export async function getGaslessClient(
+	config?: GaslessClientConfig,
+): Promise<GaslessClientResult> {
+	if (gaslessClient) {
+		return gaslessClient;
+	}
+
+	gaslessClient = await createGaslessClient(config ?? getDefaultConfig());
+	return gaslessClient;
 }

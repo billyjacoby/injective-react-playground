@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatEther } from "viem";
 import { useGaslessStore } from "../stores/gaslessStore";
 
@@ -10,22 +11,21 @@ export function SmartAccountBalances() {
 		smartBalances,
 		isLoading,
 		isProcessing,
-		withdrawEthAmount,
-		withdrawWethAmount,
-		wrapSmartEthAmount,
-		unwrapSmartWethAmount,
-		peggyBridgeWethFromSmartAccountAmount,
-		setPeggyBridgeWethFromSmartAccountAmount,
 		withdrawEth,
 		withdrawWeth,
 		wrapEthFromSmartAccount,
 		unwrapWethFromSmartAccount,
 		peggyBridgeWethFromSmartAccount,
-		setWithdrawEthAmount,
-		setWithdrawWethAmount,
-		setWrapSmartEthAmount,
-		setUnwrapSmartWethAmount,
 	} = useGaslessStore();
+
+	const [withdrawEthAmount, setWithdrawEthAmount] = useState("0.001");
+	const [withdrawWethAmount, setWithdrawWethAmount] = useState("0.001");
+	const [wrapSmartEthAmount, setWrapSmartEthAmount] = useState("0.001");
+	const [unwrapSmartWethAmount, setUnwrapSmartWethAmount] = useState("0.001");
+	const [
+		peggyBridgeWethFromSmartAccountAmount,
+		setPeggyBridgeWethFromSmartAccountAmount,
+	] = useState("0.001");
 
 	return (
 		<div className="bg-gray-800 rounded-lg p-4">
@@ -52,7 +52,7 @@ export function SmartAccountBalances() {
 									/>
 									<button
 										type="button"
-										onClick={withdrawEth}
+										onClick={() => withdrawEth(withdrawEthAmount)}
 										disabled={isProcessing}
 										className="py-1 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 									>
@@ -72,7 +72,7 @@ export function SmartAccountBalances() {
 								/>
 								<button
 									type="button"
-									onClick={wrapEthFromSmartAccount}
+									onClick={() => wrapEthFromSmartAccount(wrapSmartEthAmount)}
 									disabled={isProcessing}
 									className="py-1 px-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 								>
@@ -95,7 +95,7 @@ export function SmartAccountBalances() {
 								/>
 								<button
 									type="button"
-									onClick={withdrawWeth}
+									onClick={() => withdrawWeth(withdrawWethAmount)}
 									disabled={isProcessing}
 									className="py-1 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 								>
@@ -113,7 +113,9 @@ export function SmartAccountBalances() {
 									/>
 									<button
 										type="button"
-										onClick={unwrapWethFromSmartAccount}
+										onClick={() =>
+											unwrapWethFromSmartAccount(unwrapSmartWethAmount)
+										}
 										disabled={isProcessing}
 										className="py-1 px-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 									>
@@ -133,7 +135,11 @@ export function SmartAccountBalances() {
 								/>
 								<button
 									type="button"
-									onClick={peggyBridgeWethFromSmartAccount}
+									onClick={() =>
+										peggyBridgeWethFromSmartAccount(
+											peggyBridgeWethFromSmartAccountAmount,
+										)
+									}
 									disabled={isProcessing}
 									className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
 								>
