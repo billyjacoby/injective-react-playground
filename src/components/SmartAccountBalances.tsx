@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatEther } from "viem";
+import { usdcToken, wethToken } from "../constants/tokens";
 import { useGaslessStore } from "../stores/gaslessStore";
 
 function fmtEth(v: bigint) {
@@ -15,8 +16,9 @@ export function SmartAccountBalances() {
 		withdrawWeth,
 		wrapEthFromSmartAccount,
 		unwrapWethFromSmartAccount,
-		peggyBridgeWethFromSmartAccount,
+		peggyBridgeERC20FromSmartAccount: peggyBridgeWethFromSmartAccount,
 	} = useGaslessStore();
+	console.log("🪵 | SmartAccountBalances | smartBalances:", smartBalances);
 
 	const [withdrawEthAmount, setWithdrawEthAmount] = useState("0.001");
 	const [withdrawWethAmount, setWithdrawWethAmount] = useState("0.001");
@@ -138,6 +140,54 @@ export function SmartAccountBalances() {
 									onClick={() =>
 										peggyBridgeWethFromSmartAccount(
 											peggyBridgeWethFromSmartAccountAmount,
+											wethToken,
+										)
+									}
+									disabled={isProcessing}
+									className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
+								>
+									Bridge → Injective
+								</button>
+							</div>
+						</div>
+					)}
+					{/* USDC */}
+					{smartBalances.usdc > 0n && (
+						<div className="space-y-2">
+							<div className="flex items-center gap-2">
+								<span className="w-28">USDC: {fmtEth(smartBalances.usdc)}</span>
+								<input
+									type="text"
+									value={withdrawWethAmount}
+									onChange={(e) => setWithdrawWethAmount(e.target.value)}
+									className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs font-mono"
+									placeholder="0.001"
+								/>
+								<button
+									type="button"
+									onClick={() => withdrawWeth(withdrawWethAmount)}
+									disabled={isProcessing}
+									className="py-1 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
+								>
+									Withdraw
+								</button>
+							</div>
+							<div className="flex items-center gap-2">
+								<input
+									type="text"
+									value={peggyBridgeWethFromSmartAccountAmount}
+									onChange={(e) =>
+										setPeggyBridgeWethFromSmartAccountAmount(e.target.value)
+									}
+									className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs font-mono"
+									placeholder="0.001"
+								/>
+								<button
+									type="button"
+									onClick={() =>
+										peggyBridgeWethFromSmartAccount(
+											peggyBridgeWethFromSmartAccountAmount,
+											usdcToken,
 										)
 									}
 									disabled={isProcessing}

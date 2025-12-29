@@ -13,11 +13,17 @@ import {
 	erc20Abi,
 	maxUint256,
 	parseEther,
+	parseUnits,
 	publicActions,
 } from "viem";
 import { create } from "zustand";
 import { NETWORK } from "../constants/setup";
-import { usdtToken, wethToken } from "../constants/tokens";
+import {
+	TokenInfo,
+	usdcToken,
+	usdtToken,
+	wethToken,
+} from "../constants/tokens";
 import { erc20WethAbi } from "../lib/contracts/Erc20WethContract";
 import {
 	getInjectivePeggyBridgeAddress,
@@ -29,9 +35,10 @@ type Balances = {
 	eth: bigint;
 	weth: bigint;
 	usdt: bigint;
+	usdc: bigint;
 };
 
-const ZERO_BALANCES: Balances = { eth: 0n, weth: 0n, usdt: 0n };
+const ZERO_BALANCES: Balances = { eth: 0n, weth: 0n, usdt: 0n, usdc: 0n };
 
 type GaslessStore = {
 	// State
@@ -61,8 +68,11 @@ type GaslessStore = {
 	wrapEthFromSmartAccount: (amount?: string) => Promise<void>;
 	unwrapWethFromEoa: (amount?: string) => Promise<void>;
 	unwrapWethFromSmartAccount: (amount?: string) => Promise<void>;
-	peggyBridgeWethFromEOA: (amount: string) => Promise<void>;
-	peggyBridgeWethFromSmartAccount: (amount?: string) => Promise<void>;
+	peggyBridgeERC20FromEOA: (amount: string, token: TokenInfo) => Promise<void>;
+	peggyBridgeERC20FromSmartAccount: (
+		amount: string | undefined,
+		token: TokenInfo,
+	) => Promise<void>;
 };
 
 const chain = getInjNetworkToChain(NETWORK);
@@ -155,19 +165,39 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		};
 
 		try {
-			const [eoaEth, eoaWeth, eoaUsdt, smartEth, smartWeth, smartUsdt] =
-				await Promise.all([
-					walletClient.getBalance({ address: ownerAddress }),
-					safeErc20Balance(wethToken.address as Address, ownerAddress),
-					safeErc20Balance(usdtToken.address as Address, ownerAddress),
-					walletClient.getBalance({ address: smartAccountAddress }),
-					safeErc20Balance(wethToken.address as Address, smartAccountAddress),
-					safeErc20Balance(usdtToken.address as Address, smartAccountAddress),
-				]);
+			const [
+				eoaEth,
+				eoaWeth,
+				eoaUsdt,
+				eoaUsdc,
+				smartEth,
+				smartWeth,
+				smartUsdt,
+				smartUsdc,
+			] = await Promise.all([
+				walletClient.getBalance({ address: ownerAddress }),
+				safeErc20Balance(wethToken.address as Address, ownerAddress),
+				safeErc20Balance(usdtToken.address as Address, ownerAddress),
+				safeErc20Balance(usdcToken.address as Address, ownerAddress),
+				walletClient.getBalance({ address: smartAccountAddress }),
+				safeErc20Balance(wethToken.address as Address, smartAccountAddress),
+				safeErc20Balance(usdtToken.address as Address, smartAccountAddress),
+				safeErc20Balance(usdcToken.address as Address, smartAccountAddress),
+			]);
 
 			set({
-				eoaBalances: { eth: eoaEth, weth: eoaWeth, usdt: eoaUsdt },
-				smartBalances: { eth: smartEth, weth: smartWeth, usdt: smartUsdt },
+				eoaBalances: {
+					eth: eoaEth,
+					weth: eoaWeth,
+					usdt: eoaUsdt,
+					usdc: eoaUsdc,
+				},
+				smartBalances: {
+					eth: smartEth,
+					weth: smartWeth,
+					usdt: smartUsdt,
+					usdc: smartUsdc,
+				},
 				isLoading: false,
 			});
 		} catch (error) {
@@ -632,24 +662,13 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}
 	},
 
-	peggyBridgeWethFromEOA: async (peggyBridgeWethFromEOAAmount: string) => {
+	peggyBridgeERC20FromEOA: async (
+		peggyBridgeERC20FromEOAAmount: string,
+		token: TokenInfo,
+	) => {
 		const { ownerAddress, eoaBalances } = get();
 		if (!ownerAddress || !window.ethereum || eoaBalances.weth === 0n) return;
 
-		const amount = parseEther(peggyBridgeWethFromEOAAmount);
-		console.log("🌉 Starting Peggy Bridge from EOA:", {
-			amount: amount.toString(),
-			amountEth: peggyBridgeWethFromEOAAmount,
-			from: ownerAddress,
-		});
-
-		if (amount > eoaBalances.weth) {
-			set({
-				status: "Insufficient WETH balance",
-				isProcessing: false,
-			});
-			return;
-		}
 		const chainConfig = getInjNetworkToChain(NETWORK);
 
 		const walletClient = createWalletClient({
@@ -657,30 +676,56 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			transport: custom(window.ethereum),
 		}).extend(publicActions);
 
+		const tokenBalance = await walletClient.readContract({
+			address: token.address as Address,
+			abi: erc20Abi,
+			functionName: "balanceOf",
+			args: [ownerAddress],
+		});
+
+		const amount = parseUnits(peggyBridgeERC20FromEOAAmount, token.decimals);
+
+		console.log("🌉 Starting Peggy Bridge from EOA:", {
+			amount: amount.toString(),
+			amountEth: peggyBridgeERC20FromEOAAmount,
+			from: ownerAddress,
+		});
+
+		if (amount > tokenBalance) {
+			set({
+				status: `Insufficient ${token.symbol} balance`,
+				isProcessing: false,
+			});
+			return;
+		}
+
 		const [address] = await walletClient.getAddresses();
 		const injectiveAddress = getInjectiveAddress(address);
 		console.log("🎯 Destination Injective address:", injectiveAddress);
 
 		// Check the ERC20 allowance for the token
 		const allowance = await walletClient.readContract({
-			address: wethToken.address as Address,
+			address: token.address as Address,
 			abi: erc20Abi,
 			functionName: "allowance",
 			args: [ownerAddress, getInjectivePeggyBridgeAddress(NETWORK)],
 		});
-		console.log("🔍 Current WETH allowance:", allowance.toString());
+		console.log("🔍 Current ${token.symbol} allowance:", allowance.toString());
 
 		if (allowance < amount || allowance !== maxUint256) {
-			console.log("📝 Approving WETH allowance...");
+			console.log("📝 Approving ${token.symbol} allowance...");
 			const hash = await walletClient.writeContract({
 				account: ownerAddress,
-				address: wethToken.address as Address,
+				address: token.address as Address,
 				abi: erc20Abi,
 				functionName: "approve",
 				args: [getInjectivePeggyBridgeAddress(NETWORK), maxUint256],
 			});
 			console.log("📤 Approval tx hash:", hash);
-			set({ isProcessing: true, status: "Approving WETH allowance..." });
+			set({
+				isProcessing: true,
+				status: `Approving ${token.symbol} allowance...`,
+			});
 
 			const result = await walletClient
 				.waitForTransactionReceipt({ hash })
@@ -688,7 +733,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 					console.error("❌ Approval failed:", error);
 					set({
 						isProcessing: false,
-						status: "Failed to approve WETH allowance",
+						status: `Failed to approve ${token.symbol} allowance`,
 					});
 					return null;
 				});
@@ -704,10 +749,13 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			address: getInjectivePeggyBridgeAddress(NETWORK),
 			abi: PEGGY_ABI,
 			functionName: "sendToInjective",
-			args: [wethToken.address as Address, destinationBytes32, amount, ""],
+			args: [token.address as Address, destinationBytes32, amount, ""],
 		});
 		console.log("📤 Bridge tx hash:", hash);
-		set({ isProcessing: true, status: "Bridging WETH to Injective (EOA)..." });
+		set({
+			isProcessing: true,
+			status: `Bridging ${token.symbol} to Injective (EOA)..`,
+		});
 
 		await walletClient
 			.waitForTransactionReceipt({ hash })
@@ -731,12 +779,25 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			});
 	},
 
-	peggyBridgeWethFromSmartAccount: async (
-		peggyBridgeWethFromSmartAccountAmount?: string,
+	peggyBridgeERC20FromSmartAccount: async (
+		peggyBridgeERC20FromSmartAccountAmount: string | undefined,
+		token: TokenInfo,
 	) => {
-		const { gaslessClient, smartBalances } = get();
+		const { gaslessClient } = get();
 
-		if (!gaslessClient || smartBalances.weth === 0n) {
+		if (!gaslessClient) {
+			set({
+				status: "No gasless client connected",
+				isProcessing: false,
+			});
+			return;
+		}
+
+		const tokenBalance = await gaslessClient.getSmartAccountBalance(
+			token.address as Address,
+		);
+
+		if (tokenBalance === 0n) {
 			set({
 				status: "Insufficient WETH balance in smart account",
 				isProcessing: false,
@@ -758,9 +819,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		});
 
 		try {
-			const amount = peggyBridgeWethFromSmartAccountAmount
-				? parseEther(peggyBridgeWethFromSmartAccountAmount)
-				: smartBalances.weth;
+			const amount = peggyBridgeERC20FromSmartAccountAmount
+				? parseUnits(peggyBridgeERC20FromSmartAccountAmount, token.decimals)
+				: tokenBalance;
 
 			const walletClient = createWalletClient({
 				chain,
@@ -772,13 +833,13 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 			console.log("🌉 Starting Peggy Bridge from Smart Account (gasless):", {
 				amount: amount.toString(),
-				amountEth: peggyBridgeWethFromSmartAccountAmount || "all",
-				tokenAddress: wethToken.address,
+				amountEth: peggyBridgeERC20FromSmartAccountAmount || "all",
+				tokenAddress: token.address as Address,
 				destinationInjAddress: injectiveAddress,
 			});
 
 			const result = await gaslessClient.bridgeToInjective({
-				tokenAddress: wethToken.address as Address,
+				tokenAddress: token.address as Address,
 				amount,
 				injectiveAddress,
 			});
@@ -791,7 +852,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 			set({
 				isProcessing: false,
-				status: "WETH bridged to Injective (gasless)!",
+				status: `${token.symbol} bridged to Injective (gasless)!`,
 			});
 			await get().fetchBalances();
 		} catch (error) {

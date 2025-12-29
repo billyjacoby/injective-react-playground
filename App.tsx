@@ -1,11 +1,20 @@
+import { MoonPayProvider } from "@moonpay/moonpay-react";
 import { useEffect } from "react";
 import { AddressDisplay } from "./src/components/AddressDisplay";
 import { ConnectButton } from "./src/components/ConnectButton";
 import { EoaBalances } from "./src/components/EoaBalances";
+import { Moonpay } from "./src/components/Moonpay";
 import { SmartAccountBalances } from "./src/components/SmartAccountBalances";
 import { StatusMessage } from "./src/components/StatusMessage";
 import { TestGaslessButton } from "./src/components/TestGaslessButton";
 import { useGaslessStore } from "./src/stores/gaslessStore";
+
+const MOONPAY_API_KEY = import.meta.env.VITE_MOONPAY_API_KEY;
+console.log("🪵 | MOONPAY_API_KEY:", MOONPAY_API_KEY);
+
+if (!MOONPAY_API_KEY) {
+	throw new Error("Moonpay API key is not set");
+}
 
 function App() {
 	const { ownerAddress, smartAccountAddress, fetchBalances } =
@@ -28,6 +37,7 @@ function App() {
 				) : (
 					<div className="space-y-4">
 						<AddressDisplay />
+						<Moonpay />
 						<TestGaslessButton />
 						<EoaBalances />
 						<SmartAccountBalances />
@@ -40,4 +50,10 @@ function App() {
 	);
 }
 
-export default App;
+export default function WrappedApp() {
+	return (
+		<MoonPayProvider apiKey={MOONPAY_API_KEY}>
+			<App />
+		</MoonPayProvider>
+	);
+}

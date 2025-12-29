@@ -7,6 +7,8 @@ export const USDT_LOGO_URL =
 	"https://imagedelivery.net/lPzngbR8EltRfBOi_WYaXw/e46e1742-fb16-4393-cc40-83b20e875400/public";
 export const WETH_LOGO_URL =
 	"https://imagedelivery.net/lPzngbR8EltRfBOi_WYaXw/a8d72344-01e4-4471-3098-2fd58f179b00/public";
+export const USDC_LOGO_URL =
+	"https://imagedelivery.net/lPzngbR8EltRfBOi_WYaXw/6f015260-c589-499f-b692-a57964af9900/public";
 export const UNKNOWN_LOGO_URL =
 	"https://imagedelivery.net/lPzngbR8EltRfBOi_WYaXw/6f015260-c589-499f-b692-a57964af9900/public";
 
@@ -47,6 +49,18 @@ export const usdtToken: TokenInfo = {
 	logo: USDT_LOGO_URL,
 	coinGeckoId: "tether",
 	denom: USDT_DENOM,
+};
+
+export const usdcToken: TokenInfo = {
+	address: IS_MAINNET
+		? "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+		: "0x699cFE8997d647D03325Ef4bfD039d5bB0984A17",
+	decimals: 6,
+	symbol: "USDC",
+	name: "USD Coin",
+	logo: USDC_LOGO_URL,
+	coinGeckoId: "usd-coin",
+	denom: "peggy0x6b175474e89094c44da98b954eedeac495271d0f",
 };
 
 // wETH/USDT spot market ID on Injective mainnet

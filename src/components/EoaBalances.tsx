@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatEther } from "viem";
 import { useShallow } from "zustand/shallow";
+import { wethToken } from "../constants/tokens";
 import { useGaslessStore } from "../stores/gaslessStore";
 
 function fmtEth(v: bigint) {
@@ -26,7 +27,7 @@ export function EoaBalances() {
 			fundWeth: state.fundWeth,
 			wrapEthFromEoa: state.wrapEthFromEoa,
 			unwrapWethFromEoa: state.unwrapWethFromEoa,
-			peggyBridgeWethFromEOA: state.peggyBridgeWethFromEOA,
+			peggyBridgeWethFromEOA: state.peggyBridgeERC20FromEOA,
 		})),
 	);
 
@@ -129,7 +130,10 @@ export function EoaBalances() {
 										<button
 											type="button"
 											onClick={() =>
-												peggyBridgeWethFromEOA(peggyBridgeWethFromEOAAmount)
+												peggyBridgeWethFromEOA(
+													peggyBridgeWethFromEOAAmount,
+													wethToken,
+												)
 											}
 											disabled={isProcessing}
 											className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
