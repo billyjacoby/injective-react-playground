@@ -21,6 +21,7 @@
 		"inj-latest": "pnpm add @injectivelabs/networks@latest @injectivelabs/sdk-ts@latest @injectivelabs/token-metadata@latest @injectivelabs/ts-types@latest @injectivelabs/utils@latest @injectivelabs/wallet-core@latest @injectivelabs/wallet-base@latest"
 	},
 	"dependencies": {
+		"@billyjacoby/peggy-onramp": "link:../peggy-onramp",
 		"@hono/node-server": "^1.13.1",
 		"@injectivelabs/networks": "^1.16.34",
 		"@injectivelabs/sdk-ts": "^1.16.34",
@@ -62,7 +63,6 @@
 		"eslint": "^8.57.0",
 		"eslint-plugin-react-hooks": "^4.6.2",
 		"eslint-plugin-react-refresh": "^0.4.7",
-		"helix-mobile-server": "link:../injective-helix-server",
 		"postcss": "^8.4.38",
 		"tailwindcss": "^3.4.4",
 		"tsx": "^4.15.2",

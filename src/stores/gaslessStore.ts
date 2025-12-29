@@ -1,5 +1,11 @@
+import {
+	GaslessBridgeClient,
+	PEGGY_ABI,
+	type SupportedChain,
+} from "@billyjacoby/peggy-onramp";
+import { isMainnet } from "@injectivelabs/networks";
 import { getInjectiveAddress } from "@injectivelabs/sdk-ts";
-import type { Address, Chain, Hex, PublicClient, WalletClient } from "viem";
+import type { Address, Chain, PublicClient, WalletClient } from "viem";
 import {
 	createWalletClient,
 	custom,
@@ -9,7 +15,6 @@ import {
 	parseEther,
 	publicActions,
 } from "viem";
-import { BundlerClient, SmartAccount } from "viem/account-abstraction";
 import { create } from "zustand";
 import { NETWORK } from "../constants/setup";
 import { usdtToken, wethToken } from "../constants/tokens";
@@ -17,11 +22,7 @@ import { erc20WethAbi } from "../lib/contracts/Erc20WethContract";
 import {
 	getInjectivePeggyBridgeAddress,
 	PeggyContract,
-	peggyAbi,
 } from "../lib/contracts/PeggyContract";
-import { getDefaultConfig, getGaslessClient } from "../lib/gasless/client";
-import { sendGasless } from "../lib/gasless/transactions";
-import { handleCommonErrors } from "../lib/utils/common-errors";
 import { getInjNetworkToChain } from "../lib/utils/network";
 
 type Balances = {
@@ -44,9 +45,8 @@ type GaslessStore = {
 	isProcessing: boolean;
 	chain: Chain;
 
-	// Clients (memoized)
-	smartAccount: SmartAccount | null;
-	bundlerClient: BundlerClient | null;
+	// Clients
+	gaslessClient: GaslessBridgeClient | null;
 	walletClient: (WalletClient & PublicClient) | null;
 
 	// Actions
@@ -80,35 +80,46 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	chain,
 
 	// Clients
-	smartAccount: null,
-	bundlerClient: null,
+	gaslessClient: null,
 	walletClient: null,
 
 	// Actions
 	connectWallet: async () => {
-		const config = getDefaultConfig();
-
-		const error = handleCommonErrors(config);
-
-		if (error) {
-			set({ status: error });
-			return;
-		}
+		const apiKey = isMainnet(NETWORK)
+			? (import.meta.env.VITE_ALCHEMY_KEY as string)
+			: (import.meta.env.VITE_ALCHEMY_SEPOLIA_KEY as string);
+		const policyId = isMainnet(NETWORK)
+			? (import.meta.env.VITE_ALCHEMY_GAS_POLICY_ID as string)
+			: (import.meta.env.VITE_ALCHEMY_GAS_POLICY_ID_SEPOLIA as string);
 
 		set({ isConnecting: true, status: "Connecting..." });
 
 		try {
-			const {
-				smartAccount,
-				bundlerClient,
-				ownerAddress,
-				smartAccountAddress,
-				walletClient,
-			} = await getGaslessClient(config);
+			const chainName: SupportedChain = isMainnet(NETWORK)
+				? "mainnet"
+				: "sepolia";
+
+			const gaslessClient = new GaslessBridgeClient({
+				chain: chainName,
+				apiKey,
+				policyId,
+			});
+
+			const { ownerAddress, smartAccountAddress } =
+				await gaslessClient.connect();
+
+			// Create wallet client for balance fetching
+			if (!window.ethereum) {
+				throw new Error("No ethereum provider found");
+			}
+
+			const walletClient = createWalletClient({
+				chain,
+				transport: custom(window.ethereum),
+			}).extend(publicActions);
 
 			set({
-				smartAccount,
-				bundlerClient,
+				gaslessClient,
 				ownerAddress,
 				smartAccountAddress,
 				walletClient,
@@ -166,14 +177,8 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	},
 
 	testGasless: async () => {
-		const { ownerAddress, smartAccountAddress, walletClient } = get();
-		if (
-			!ownerAddress ||
-			!smartAccountAddress ||
-			!walletClient ||
-			!walletClient.account
-		)
-			return;
+		const { gaslessClient, ownerAddress } = get();
+		if (!gaslessClient || !ownerAddress) return;
 
 		set({
 			isProcessing: true,
@@ -181,20 +186,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		});
 
 		try {
-			const config = getDefaultConfig();
-			if (!config.policyId) throw new Error("Missing policy ID");
-
-			const hashedData = await walletClient.signTransaction({
-				account: walletClient.account,
-				chain,
+			console.log("🔄 Sending test gasless transaction...");
+			const result = await gaslessClient.sendGasless({
 				to: ownerAddress,
 				value: 0n,
 			});
-
-			await sendGasless({ to: ownerAddress, data: hashedData });
+			console.log("✅ Test gasless tx result:", {
+				userOperationHash: result.userOperationHash,
+				transactionHash: result.transactionHash,
+				smartAccountAddress: result.smartAccountAddress,
+			});
 			set({ status: "Test gasless tx successful!", isProcessing: false });
 		} catch (error) {
-			console.error("Test gasless error:", error);
+			console.error("❌ Test gasless error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Test tx failed",
 				isProcessing: false,
@@ -211,6 +215,13 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 		try {
 			const amount = parseEther(fundEthAmount);
+			console.log("💰 Funding ETH to smart account:", {
+				amount: amount.toString(),
+				amountEth: fundEthAmount,
+				from: ownerAddress,
+				to: smartAccountAddress,
+			});
+
 			if (amount > eoaBalances.eth) {
 				set({
 					status: "Insufficient ETH balance",
@@ -225,13 +236,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				value: amount,
 				chain,
 			});
+			console.log("📤 Fund ETH tx hash:", hash);
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await walletClient.waitForTransactionReceipt({ hash });
+			const receipt = await walletClient.waitForTransactionReceipt({ hash });
+			console.log("✅ Fund ETH receipt:", {
+				transactionHash: receipt.transactionHash,
+				blockNumber: receipt.blockNumber,
+				status: receipt.status,
+			});
 			set({ status: "ETH sent to smart account!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Fund ETH error:", error);
+			console.error("❌ Fund ETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Fund failed",
 				isProcessing: false,
@@ -254,6 +271,13 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 		try {
 			const amount = parseEther(fundWethAmount);
+			console.log("💰 Funding WETH to smart account:", {
+				amount: amount.toString(),
+				amountEth: fundWethAmount,
+				from: ownerAddress,
+				to: smartAccountAddress,
+			});
+
 			if (amount > eoaBalances.weth) {
 				set({
 					status: "Insufficient WETH balance",
@@ -270,13 +294,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				args: [smartAccountAddress, amount],
 				chain,
 			});
+			console.log("📤 Fund WETH tx hash:", hash);
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await walletClient.waitForTransactionReceipt({ hash });
+			const receipt = await walletClient.waitForTransactionReceipt({ hash });
+			console.log("✅ Fund WETH receipt:", {
+				transactionHash: receipt.transactionHash,
+				blockNumber: receipt.blockNumber,
+				status: receipt.status,
+			});
 			set({ status: "WETH sent to smart account!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Fund WETH error:", error);
+			console.error("❌ Fund WETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Fund failed",
 				isProcessing: false,
@@ -285,15 +315,8 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	},
 
 	withdrawEth: async (withdrawEthAmount?: string) => {
-		const { ownerAddress, smartAccountAddress, smartBalances, walletClient } =
-			get();
-		if (
-			!ownerAddress ||
-			!smartAccountAddress ||
-			smartBalances.eth === 0n ||
-			!walletClient
-		)
-			return;
+		const { gaslessClient, ownerAddress, smartBalances } = get();
+		if (!gaslessClient || !ownerAddress || smartBalances.eth === 0n) return;
 
 		set({ isProcessing: true, status: "Withdrawing ETH (gasless)..." });
 
@@ -301,6 +324,12 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			const amount = withdrawEthAmount
 				? parseEther(withdrawEthAmount)
 				: smartBalances.eth;
+			console.log("🔄 Withdrawing ETH (gasless):", {
+				amount: amount.toString(),
+				amountEth: withdrawEthAmount || "all",
+				to: ownerAddress,
+			});
+
 			if (amount > smartBalances.eth) {
 				set({
 					status: "Insufficient ETH in smart account",
@@ -309,11 +338,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				return;
 			}
 
-			await sendGasless({ to: ownerAddress, value: amount });
+			const result = await gaslessClient.sendGasless({
+				to: ownerAddress,
+				value: amount,
+			});
+			console.log("✅ Withdraw ETH result:", {
+				userOperationHash: result.userOperationHash,
+				transactionHash: result.transactionHash,
+				smartAccountAddress: result.smartAccountAddress,
+			});
 			set({ status: "ETH withdrawn (gasless)!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Withdraw ETH error:", error);
+			console.error("❌ Withdraw ETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Withdraw failed",
 				isProcessing: false,
@@ -322,25 +359,21 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	},
 
 	withdrawWeth: async (withdrawWethAmount?: string) => {
-		const { ownerAddress, smartAccountAddress, smartBalances, walletClient } =
-			get();
-		if (
-			!ownerAddress ||
-			!smartAccountAddress ||
-			smartBalances.weth === 0n ||
-			!walletClient
-		)
-			return;
+		const { gaslessClient, ownerAddress, smartBalances } = get();
+		if (!gaslessClient || !ownerAddress || smartBalances.weth === 0n) return;
 
 		set({ isProcessing: true, status: "Withdrawing WETH (gasless)..." });
 
 		try {
-			const config = getDefaultConfig();
-			if (!config.policyId) throw new Error("Missing policy ID");
-
 			const amount = withdrawWethAmount
 				? parseEther(withdrawWethAmount)
 				: smartBalances.weth;
+			console.log("🔄 Withdrawing WETH (gasless):", {
+				amount: amount.toString(),
+				amountEth: withdrawWethAmount || "all",
+				to: ownerAddress,
+			});
+
 			if (amount > smartBalances.weth) {
 				set({
 					status: "Insufficient WETH in smart account",
@@ -355,14 +388,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				args: [ownerAddress, amount],
 			});
 
-			await sendGasless({
+			const result = await gaslessClient.sendGasless({
 				to: wethToken.address as Address,
 				data: transferCalldata,
+			});
+			console.log("✅ Withdraw WETH result:", {
+				userOperationHash: result.userOperationHash,
+				transactionHash: result.transactionHash,
+				smartAccountAddress: result.smartAccountAddress,
 			});
 			set({ status: "WETH withdrawn (gasless)!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Withdraw WETH error:", error);
+			console.error("❌ Withdraw WETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Withdraw failed",
 				isProcessing: false,
@@ -384,6 +422,12 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 		try {
 			const amount = parseEther(wrapEoaEthAmount);
+			console.log("🔄 Wrapping ETH to WETH (EOA):", {
+				amount: amount.toString(),
+				amountEth: wrapEoaEthAmount,
+				from: ownerAddress,
+			});
+
 			if (amount > eoaBalances.eth) {
 				set({
 					status: "Insufficient ETH balance",
@@ -401,15 +445,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				value: amount,
 				chain,
 			});
-
-			console.log("🪵 | hash:", hash);
+			console.log("📤 Wrap ETH tx hash:", hash);
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await walletClient.waitForTransactionReceipt({ hash });
+			const receipt = await walletClient.waitForTransactionReceipt({ hash });
+			console.log("✅ Wrap ETH receipt:", {
+				transactionHash: receipt.transactionHash,
+				blockNumber: receipt.blockNumber,
+				status: receipt.status,
+			});
 			set({ status: "ETH wrapped to WETH!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Wrap ETH error:", error);
+			console.error("❌ Wrap ETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Wrap failed",
 				isProcessing: false,
@@ -418,8 +466,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	},
 
 	wrapEthFromSmartAccount: async (wrapSmartEthAmount?: string) => {
-		const { smartBalances } = get();
-		if (!smartBalances.eth || smartBalances.eth === 0n) return;
+		const { gaslessClient, smartBalances } = get();
+		if (!gaslessClient || !smartBalances.eth || smartBalances.eth === 0n)
+			return;
 
 		set({
 			isProcessing: true,
@@ -427,12 +476,14 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		});
 
 		try {
-			const config = getDefaultConfig();
-			if (!config.policyId) throw new Error("Missing policy ID");
-
 			const amount = wrapSmartEthAmount
 				? parseEther(wrapSmartEthAmount)
 				: smartBalances.eth;
+			console.log("🔄 Wrapping ETH to WETH (gasless):", {
+				amount: amount.toString(),
+				amountEth: wrapSmartEthAmount || "all",
+			});
+
 			if (amount > smartBalances.eth) {
 				set({
 					status: "Insufficient ETH in smart account",
@@ -447,16 +498,21 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				args: [],
 			});
 
-			await sendGasless({
+			const result = await gaslessClient.sendGasless({
 				to: wethToken.address as Address,
 				data: depositCalldata,
 				value: amount,
+			});
+			console.log("✅ Wrap ETH (gasless) result:", {
+				userOperationHash: result.userOperationHash,
+				transactionHash: result.transactionHash,
+				smartAccountAddress: result.smartAccountAddress,
 			});
 
 			set({ status: "ETH wrapped to WETH (gasless)!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Wrap ETH error:", error);
+			console.error("❌ Wrap ETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Wrap failed",
 				isProcessing: false,
@@ -480,6 +536,12 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			const amount = unwrapEoaWethAmount
 				? parseEther(unwrapEoaWethAmount)
 				: eoaBalances.weth;
+			console.log("🔄 Unwrapping WETH to ETH (EOA):", {
+				amount: amount.toString(),
+				amountEth: unwrapEoaWethAmount || "all",
+				from: ownerAddress,
+			});
+
 			if (amount > eoaBalances.weth) {
 				set({
 					status: "Insufficient WETH balance",
@@ -496,13 +558,19 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				args: [amount],
 				chain,
 			});
+			console.log("📤 Unwrap WETH tx hash:", hash);
 
 			set({ status: `Tx sent: ${hash.slice(0, 10)}...` });
-			await walletClient.waitForTransactionReceipt({ hash });
+			const receipt = await walletClient.waitForTransactionReceipt({ hash });
+			console.log("✅ Unwrap WETH receipt:", {
+				transactionHash: receipt.transactionHash,
+				blockNumber: receipt.blockNumber,
+				status: receipt.status,
+			});
 			set({ status: "WETH unwrapped to ETH!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Unwrap WETH error:", error);
+			console.error("❌ Unwrap WETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Unwrap failed",
 				isProcessing: false,
@@ -511,8 +579,9 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 	},
 
 	unwrapWethFromSmartAccount: async (unwrapSmartWethAmount?: string) => {
-		const { smartBalances } = get();
-		if (!smartBalances.weth || smartBalances.weth === 0n) return;
+		const { gaslessClient, smartBalances } = get();
+		if (!gaslessClient || !smartBalances.weth || smartBalances.weth === 0n)
+			return;
 
 		set({
 			isProcessing: true,
@@ -520,12 +589,14 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		});
 
 		try {
-			const config = getDefaultConfig();
-			if (!config.policyId) throw new Error("Missing policy ID");
-
 			const amount = unwrapSmartWethAmount
 				? parseEther(unwrapSmartWethAmount)
 				: smartBalances.weth;
+			console.log("🔄 Unwrapping WETH to ETH (gasless):", {
+				amount: amount.toString(),
+				amountEth: unwrapSmartWethAmount || "all",
+			});
+
 			if (amount > smartBalances.weth) {
 				set({
 					status: "Insufficient WETH in smart account",
@@ -540,15 +611,20 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				args: [amount],
 			});
 
-			await sendGasless({
+			const result = await gaslessClient.sendGasless({
 				to: wethToken.address as Address,
 				data: withdrawCalldata,
+			});
+			console.log("✅ Unwrap WETH (gasless) result:", {
+				userOperationHash: result.userOperationHash,
+				transactionHash: result.transactionHash,
+				smartAccountAddress: result.smartAccountAddress,
 			});
 
 			set({ status: "WETH unwrapped to ETH (gasless)!", isProcessing: false });
 			await get().fetchBalances();
 		} catch (error) {
-			console.error("Unwrap WETH error:", error);
+			console.error("❌ Unwrap WETH error:", error);
 			set({
 				status: error instanceof Error ? error.message : "Unwrap failed",
 				isProcessing: false,
@@ -561,6 +637,12 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		if (!ownerAddress || !window.ethereum || eoaBalances.weth === 0n) return;
 
 		const amount = parseEther(peggyBridgeWethFromEOAAmount);
+		console.log("🌉 Starting Peggy Bridge from EOA:", {
+			amount: amount.toString(),
+			amountEth: peggyBridgeWethFromEOAAmount,
+			from: ownerAddress,
+		});
+
 		if (amount > eoaBalances.weth) {
 			set({
 				status: "Insufficient WETH balance",
@@ -576,6 +658,8 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 		}).extend(publicActions);
 
 		const [address] = await walletClient.getAddresses();
+		const injectiveAddress = getInjectiveAddress(address);
+		console.log("🎯 Destination Injective address:", injectiveAddress);
 
 		// Check the ERC20 allowance for the token
 		const allowance = await walletClient.readContract({
@@ -584,8 +668,10 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			functionName: "allowance",
 			args: [ownerAddress, getInjectivePeggyBridgeAddress(NETWORK)],
 		});
+		console.log("🔍 Current WETH allowance:", allowance.toString());
 
 		if (allowance < amount || allowance !== maxUint256) {
+			console.log("📝 Approving WETH allowance...");
 			const hash = await walletClient.writeContract({
 				account: ownerAddress,
 				address: wethToken.address as Address,
@@ -593,59 +679,64 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 				functionName: "approve",
 				args: [getInjectivePeggyBridgeAddress(NETWORK), maxUint256],
 			});
+			console.log("📤 Approval tx hash:", hash);
 			set({ isProcessing: true, status: "Approving WETH allowance..." });
+
 			const result = await walletClient
 				.waitForTransactionReceipt({ hash })
-				.catch(() => {
+				.catch((error) => {
+					console.error("❌ Approval failed:", error);
 					set({
 						isProcessing: false,
 						status: "Failed to approve WETH allowance",
 					});
 					return null;
 				});
-			console.log("🪵 | result:", result);
+			console.log("✅ Approval receipt:", result);
 		}
 
-		const destinationBytes32 = PeggyContract.convertInjectiveAddressToBytes32(
-			getInjectiveAddress(address),
-		);
+		const destinationBytes32 =
+			PeggyContract.convertInjectiveAddressToBytes32(injectiveAddress);
+		console.log("🔄 Sending bridge transaction...");
 
 		const hash = await walletClient.writeContract({
 			account: ownerAddress,
 			address: getInjectivePeggyBridgeAddress(NETWORK),
-			abi: peggyAbi,
+			abi: PEGGY_ABI,
 			functionName: "sendToInjective",
 			args: [wethToken.address as Address, destinationBytes32, amount, ""],
 		});
-		console.log("🪵 | hash:", hash);
+		console.log("📤 Bridge tx hash:", hash);
 		set({ isProcessing: true, status: "Bridging WETH to Injective (EOA)..." });
 
-		const result2 = await walletClient
+		await walletClient
 			.waitForTransactionReceipt({ hash })
 			.then((receipt) => {
+				console.log("✅ Bridge receipt:", {
+					transactionHash: receipt.transactionHash,
+					blockNumber: receipt.blockNumber,
+					status: receipt.status,
+				});
 				set({
 					isProcessing: false,
 					status: "WETH bridged to Injective (EOA)!",
 				});
-				return receipt;
 			})
-			.catch(() => {
+			.catch((error) => {
+				console.error("❌ Bridge transaction failed:", error);
 				set({
 					isProcessing: false,
 					status: "Failed to bridge WETH to Injective",
 				});
-				return null;
 			});
-		console.log("🪵 | result2:", result2);
 	},
 
 	peggyBridgeWethFromSmartAccount: async (
 		peggyBridgeWethFromSmartAccountAmount?: string,
 	) => {
-		const { ownerAddress, smartAccountAddress, smartBalances } = get();
-		const { bundlerClient } = await getGaslessClient(getDefaultConfig());
+		const { gaslessClient, smartBalances } = get();
 
-		if (!ownerAddress || !smartAccountAddress || smartBalances.weth === 0n) {
+		if (!gaslessClient || smartBalances.weth === 0n) {
 			set({
 				status: "Insufficient WETH balance in smart account",
 				isProcessing: false,
@@ -666,79 +757,49 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 			status: "Bridging WETH to Injective (gasless)...",
 		});
 
-		const chainConfig = getInjNetworkToChain(NETWORK);
+		try {
+			const amount = peggyBridgeWethFromSmartAccountAmount
+				? parseEther(peggyBridgeWethFromSmartAccountAmount)
+				: smartBalances.weth;
 
-		const amount = peggyBridgeWethFromSmartAccountAmount
-			? parseEther(peggyBridgeWethFromSmartAccountAmount)
-			: smartBalances.weth;
+			const walletClient = createWalletClient({
+				chain,
+				transport: custom(window.ethereum),
+			}).extend(publicActions);
 
-		const walletClient = createWalletClient({
-			chain: chainConfig,
-			transport: custom(window.ethereum),
-		}).extend(publicActions);
+			const [address] = await walletClient.getAddresses();
+			const injectiveAddress = getInjectiveAddress(address);
 
-		const [address] = await walletClient.getAddresses();
+			console.log("🌉 Starting Peggy Bridge from Smart Account (gasless):", {
+				amount: amount.toString(),
+				amountEth: peggyBridgeWethFromSmartAccountAmount || "all",
+				tokenAddress: wethToken.address,
+				destinationInjAddress: injectiveAddress,
+			});
 
-		const destinationBytes32 = PeggyContract.convertInjectiveAddressToBytes32(
-			getInjectiveAddress(address),
-		);
+			const result = await gaslessClient.bridgeToInjective({
+				tokenAddress: wethToken.address as Address,
+				amount,
+				injectiveAddress,
+			});
 
-		// Check the ERC20 allowance for the token
-		const allowance = await walletClient.readContract({
-			address: wethToken.address as Address,
-			abi: erc20Abi,
-			functionName: "allowance",
-			args: [smartAccountAddress, getInjectivePeggyBridgeAddress(NETWORK)],
-		});
+			console.log("✅ Bridge (gasless) result:", {
+				userOperationHash: result.userOperationHash,
+				transactionHash: result.transactionHash,
+				smartAccountAddress: result.smartAccountAddress,
+			});
 
-		let approveData: Hex | null = null;
-
-		if (allowance < amount || allowance !== maxUint256) {
-			set({ isProcessing: true, status: "Approving WETH allowance..." });
-			approveData = encodeFunctionData({
-				abi: erc20Abi,
-				functionName: "approve",
-				args: [getInjectivePeggyBridgeAddress(NETWORK), maxUint256],
+			set({
+				isProcessing: false,
+				status: "WETH bridged to Injective (gasless)!",
+			});
+			await get().fetchBalances();
+		} catch (error) {
+			console.error("❌ Bridge WETH error:", error);
+			set({
+				status: error instanceof Error ? error.message : "Bridge failed",
+				isProcessing: false,
 			});
 		}
-
-		const bridgeCallData = encodeFunctionData({
-			abi: peggyAbi,
-			functionName: "sendToInjective",
-			args: [wethToken.address as Address, destinationBytes32, amount, ""],
-		});
-
-		bundlerClient.batch = {
-			multicall: true,
-		};
-		const hash = await bundlerClient.sendUserOperation({
-			calls: [
-				...(approveData
-					? [
-							{
-								data: approveData,
-								to: wethToken.address as Address,
-								value: 0n,
-							},
-						]
-					: []),
-				{
-					data: bridgeCallData,
-					to: getInjectivePeggyBridgeAddress(NETWORK),
-					value: 0n,
-				},
-			],
-		});
-
-		set({ status: `UserOp sent: ${hash.slice(0, 10)}...` });
-
-		const receipt = await bundlerClient.waitForUserOperationReceipt({ hash });
-		console.log("🪵 | receipt:", receipt);
-
-		set({
-			isProcessing: false,
-			status: "WETH bridged to Injective (gasless)!",
-		});
-		await get().fetchBalances();
 	},
 }));

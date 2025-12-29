@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@billyjacoby/peggy-onramp':
+        specifier: link:../peggy-onramp
+        version: link:../peggy-onramp
       '@hono/node-server':
         specifier: ^1.13.1
         version: 1.13.1(hono@4.6.1)
@@ -126,9 +129,6 @@ importers:
       eslint-plugin-react-refresh:
         specifier: ^0.4.7
         version: 0.4.12(eslint@8.57.1)
-      helix-mobile-server:
-        specifier: link:../injective-helix-server
-        version: link:../injective-helix-server
       postcss:
         specifier: ^8.4.38
         version: 8.4.47
