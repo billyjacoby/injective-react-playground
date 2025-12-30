@@ -799,7 +799,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 		if (tokenBalance === 0n) {
 			set({
-				status: "Insufficient WETH balance in smart account",
+				status: `Insufficient ${token.symbol} balance in smart account`,
 				isProcessing: false,
 			});
 			return;
@@ -815,7 +815,7 @@ export const useGaslessStore = create<GaslessStore>((set, get) => ({
 
 		set({
 			isProcessing: true,
-			status: "Bridging WETH to Injective (gasless)...",
+			status: `Bridging ${token.symbol} to Injective (gasless)...`,
 		});
 
 		try {

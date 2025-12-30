@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { formatEther } from "viem";
-import { usdcToken, wethToken } from "../constants/tokens";
+import { formatEther, formatUnits } from "viem";
+import { usdcToken, usdtToken, wethToken } from "../constants/tokens";
 import { useGaslessStore } from "../stores/gaslessStore";
 
 function fmtEth(v: bigint) {
@@ -16,7 +16,7 @@ export function SmartAccountBalances() {
 		withdrawWeth,
 		wrapEthFromSmartAccount,
 		unwrapWethFromSmartAccount,
-		peggyBridgeERC20FromSmartAccount: peggyBridgeWethFromSmartAccount,
+		peggyBridgeERC20FromSmartAccount,
 	} = useGaslessStore();
 	console.log("🪵 | SmartAccountBalances | smartBalances:", smartBalances);
 
@@ -28,7 +28,10 @@ export function SmartAccountBalances() {
 		peggyBridgeWethFromSmartAccountAmount,
 		setPeggyBridgeWethFromSmartAccountAmount,
 	] = useState("0.001");
-
+	const [
+		peggyBridgeUsdtFromSmartAccountAmount,
+		setPeggyBridgeUsdtFromSmartAccountAmount,
+	] = useState("");
 	return (
 		<div className="bg-gray-800 rounded-lg p-4">
 			<h2 className="text-sm text-gray-400">
@@ -138,7 +141,7 @@ export function SmartAccountBalances() {
 								<button
 									type="button"
 									onClick={() =>
-										peggyBridgeWethFromSmartAccount(
+										peggyBridgeERC20FromSmartAccount(
 											peggyBridgeWethFromSmartAccountAmount,
 											wethToken,
 										)
@@ -149,6 +152,39 @@ export function SmartAccountBalances() {
 									Bridge → Injective
 								</button>
 							</div>
+						</div>
+					)}
+					{/* USDT */}
+					{smartBalances.usdt > 0n && (
+						<div className="space-y-2">
+							<div className="flex items-center gap-2">
+								<span className="w-28">
+									USDT: {formatUnits(smartBalances.usdt, 6)}
+								</span>
+								<input
+									type="text"
+									value={peggyBridgeUsdtFromSmartAccountAmount}
+									onChange={(e) =>
+										setPeggyBridgeUsdtFromSmartAccountAmount(e.target.value)
+									}
+									className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs font-mono"
+									placeholder="0.001"
+								/>
+								<button
+									type="button"
+									onClick={() =>
+										peggyBridgeERC20FromSmartAccount(
+											peggyBridgeUsdtFromSmartAccountAmount,
+											usdtToken,
+										)
+									}
+									disabled={isProcessing}
+									className="py-1 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-xs whitespace-nowrap"
+								>
+									Bridge → Injective
+								</button>
+							</div>
+							<div className="flex items-center gap-2"></div>
 						</div>
 					)}
 					{/* USDC */}
@@ -185,7 +221,7 @@ export function SmartAccountBalances() {
 								<button
 									type="button"
 									onClick={() =>
-										peggyBridgeWethFromSmartAccount(
+										peggyBridgeERC20FromSmartAccount(
 											peggyBridgeWethFromSmartAccountAmount,
 											usdcToken,
 										)

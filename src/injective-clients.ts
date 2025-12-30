@@ -24,10 +24,11 @@ import {
 	TxGrpcApi,
 } from "@injectivelabs/sdk-ts";
 import { TokenFactory } from "@injectivelabs/token-metadata";
+import { NETWORK } from "./constants/setup";
 
 export function getInjectiveClients(network: Network) {
 	const endpoints = (() => {
-		if (network === "mainnet") {
+		if (network === Network.Mainnet) {
 			const endpoints: NetworkEndpoints = {
 				...getNetworkEndpoints(Network.Mainnet),
 				cacheGrpc: "https://k8s.bm.mainnet.chain.grpc-web.injective.network",
@@ -40,8 +41,8 @@ export function getInjectiveClients(network: Network) {
 		return getNetworkEndpoints(network);
 	})();
 
-	const IS_MAINNET = network === "mainnet";
-	const IS_TESTNET = network === "testnet";
+	const IS_MAINNET = network === Network.Mainnet;
+	const IS_TESTNET = network === Network.Testnet;
 
 	console.log(
 		"🪵 | getInjectiveClients | endpoints.indexer:",
@@ -89,5 +90,5 @@ export function getInjectiveClients(network: Network) {
 	};
 }
 
-export const injectiveClients = getInjectiveClients(Network.Mainnet);
+export const injectiveClients = getInjectiveClients(NETWORK);
 export type InjectiveClients = ReturnType<typeof getInjectiveClients>;

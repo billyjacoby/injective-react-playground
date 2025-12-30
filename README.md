@@ -1,11 +1,43 @@
-# React + TypeScript + Vite
+# Injective React Playground
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript + Vite application for testing Injective blockchain integrations with gasless transactions and Peggy bridge functionality.
 
-Currently, two official plugins are available:
+## Environment Configuration
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This project uses environment variables to configure the network and API keys. Create a `.env` file in the root directory based on `.env.example`:
+
+```bash
+# Network Configuration
+# Options: "mainnet" | "testnet" | "devnet"
+# Default: "testnet" (if not specified)
+VITE_NETWORK=testnet
+
+# Alchemy API Keys
+VITE_ALCHEMY_KEY=your_mainnet_alchemy_key_here
+VITE_ALCHEMY_SEPOLIA_KEY=your_sepolia_alchemy_key_here
+```
+
+### Network Selection
+
+The `VITE_NETWORK` environment variable determines which Injective network the application connects to:
+- `mainnet` - Injective Mainnet (Ethereum Mainnet for EVM operations)
+- `testnet` - Injective Testnet (Ethereum Sepolia for EVM operations)
+- `devnet` - Injective Devnet
+
+If not specified, the application defaults to `testnet`.
+
+## Getting Started
+
+1. Copy `.env.example` to `.env` and fill in your API keys
+2. Install dependencies: `pnpm install`
+3. Start the development server: `pnpm dev`
+
+## Features
+
+- Gasless transactions using smart accounts
+- Peggy bridge integration for cross-chain transfers
+- ERC20 token operations (WETH, USDT, USDC)
+- Network-aware configuration (automatically switches between mainnet/testnet endpoints)
 
 ## Expanding the ESLint configuration
 

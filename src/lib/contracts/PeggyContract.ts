@@ -39,7 +39,7 @@ export class PeggyContract {
 	private chain: Chain;
 
 	constructor(params: { network: Network }) {
-		this.chain = getInjNetworkToChain(params.network ?? Network.Mainnet);
+		this.chain = getInjNetworkToChain(params.network);
 		this.peggyAddress = injectivePeggyBridgeAddress;
 		this.publicClient = createPublicClient({
 			chain: this.chain,

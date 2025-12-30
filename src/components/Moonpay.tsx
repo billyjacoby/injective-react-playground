@@ -1,5 +1,7 @@
+import { Network } from "@injectivelabs/networks";
 import { MoonPayBuyWidget } from "@moonpay/moonpay-react";
 import { useState } from "react";
+import { NETWORK } from "../constants/setup";
 import { useGaslessStore } from "../stores/gaslessStore";
 
 async function getSignedUrl(url: string) {
@@ -49,7 +51,7 @@ export function Moonpay() {
 				}}
 				baseCurrencyCode="usd"
 				baseCurrencyAmount="100"
-				defaultCurrencyCode="usdc"
+				defaultCurrencyCode={NETWORK === Network.Mainnet ? "usdt" : "usdc"}
 				paymentMethod="credit_debit_card"
 				walletAddress={smartAccountAddress}
 				visible={isVisible}
