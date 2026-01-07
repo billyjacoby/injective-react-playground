@@ -34,7 +34,7 @@ export const SendInj = ({
 
   return <div>
     <input type="number" value={injToSend} onChange={(e) => setInjToSend(Number(e.target.value))} />
-      <button onClick={sendInj}>send inj</button>;
+      <button onClick={sendInj}>send inj</button>
       <p>Inj Balance: {injBalance}</p>
     </div>
 };
