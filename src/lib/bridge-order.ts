@@ -9,7 +9,6 @@ import { getEthereumAddress } from "@injectivelabs/sdk-ts";
 import {
 	type Address,
 	createPublicClient,
-	createWalletClient,
 	custom,
 	formatUnits,
 	type PublicClient,
@@ -18,69 +17,13 @@ import {
 } from "viem";
 import { injective } from "viem/chains";
 import { DEBRIDGE_INJ_CHAIN_ID } from "../../constants";
+import { deBridgeOrderInput, deBridgeOrderResponse } from "../types";
 import { debridgeERC20Abi } from "./debridge-abi";
 
 export const DEBRIDGE_API = "https://dln.debridge.finance/v1.0";
 
-// Injective EVM chain ID (1776 for mainnet)
-const INJECTIVE_CHAIN_ID = injective.id;
-
 // Injective EVM RPC URL
 const INJECTIVE_EVM_RPC = injective.rpcUrls.default.http[0];
-
-// Input parameters for creating a deBridge order
-export interface deBridgeOrderInput {
-	srcChainId: string;
-	srcChainTokenIn: string;
-	srcChainTokenInAmount: string;
-	dstChainId: string;
-	dstChainTokenOut: string;
-	dstChainTokenOutRecipient?: string;
-	account?: string;
-	dstChainTokenOutAmount?: string;
-	slippage?: number;
-	additionalTakerRewardBps?: number;
-	srcIntermediaryTokenAddress?: string;
-	dstIntermediaryTokenAddress?: string;
-	dstIntermediaryTokenSpenderAddress?: string;
-	intermediaryTokenUSDPrice?: number;
-	srcAllowedCancelBeneficiary?: string;
-	referralCode?: number;
-	affiliateFeePercent?: number;
-	srcChainOrderAuthorityAddress?: string;
-	srcChainRefundAddress?: string;
-	dstChainOrderAuthorityAddress?: string;
-	prependOperatingExpenses?: boolean;
-	deBridgeApp?: string;
-	affiliateFeeRecipient?: string;
-}
-
-// Response structure for a deBridge order
-export interface deBridgeOrderResponse {
-	tx: {
-		data: string;
-		to: string;
-		value: string;
-	};
-	estimation: {
-		srcChainTokenIn: {
-			amount: string;
-			tokenAddress: string;
-			decimals: number;
-			symbol: string;
-		};
-		dstChainTokenOut: {
-			amount: string;
-			tokenAddress: string;
-			decimals: number;
-			symbol: string;
-		};
-		fees: {
-			srcChainTokenIn: string;
-			dstChainTokenOut: string;
-		};
-	};
-}
 
 /**
  * Get viem public client for Injective chain
@@ -104,37 +47,6 @@ function getPublicClient(): PublicClient {
 				return data.result;
 			},
 		}),
-	});
-}
-
-/**
- * Get viem wallet client from window.ethereum (Rabby, MetaMask, etc.)
- */
-function getWalletClient(): WalletClient {
-	if (typeof window === "undefined") {
-		throw new Error("Window is not available.");
-	}
-
-	const windowWithEthereum = window as Window & {
-		ethereum?: {
-			request: (args: {
-				method: string;
-				params?: unknown[];
-			}) => Promise<unknown>;
-			isRabby?: boolean;
-			isMetaMask?: boolean;
-		};
-	};
-
-	if (!windowWithEthereum.ethereum) {
-		throw new Error(
-			"No Ethereum provider found. Please install Rabby or another wallet.",
-		);
-	}
-
-	return createWalletClient({
-		chain: injective,
-		transport: custom(windowWithEthereum.ethereum),
 	});
 }
 
@@ -254,19 +166,22 @@ export async function createDebridgeBridgeOrder(
  * @param params.dstChainTokenOutAmount - Optional destination amount (default: "auto")
  * @returns Transaction hash of the bridge transaction
  */
-export async function executeBridgeOrder(params: {
-	injectiveAddress: string;
-	srcChainTokenIn: Address;
-	srcChainTokenInAmount: string;
-	tokenDecimals?: number;
-	dstChainId: string;
-	dstChainTokenOut: Address;
-	dstChainTokenOutRecipient: Address;
-	dstChainTokenOutAmount?: string;
-	referralCode?: number;
-	affiliateFeePercent?: number;
-	affiliateFeeRecipient?: Address;
-}): Promise<`0x${string}`> {
+export async function executeBridgeOrder(
+	walletClient: WalletClient,
+	params: {
+		injectiveAddress: string;
+		srcChainTokenIn: Address;
+		srcChainTokenInAmount: string;
+		tokenDecimals?: number;
+		dstChainId: string;
+		dstChainTokenOut: Address;
+		dstChainTokenOutRecipient: Address;
+		dstChainTokenOutAmount?: string;
+		referralCode?: number;
+		affiliateFeePercent?: number;
+		affiliateFeeRecipient?: Address;
+	},
+): Promise<`0x${string}`> {
 	const {
 		injectiveAddress,
 		srcChainTokenIn,
@@ -287,7 +202,6 @@ export async function executeBridgeOrder(params: {
 	);
 
 	// Get wallet client and accounts
-	const walletClient = getWalletClient();
 	const [account] = await walletClient.getAddresses();
 
 	if (!account) {
