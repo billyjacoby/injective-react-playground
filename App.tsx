@@ -1,5 +1,5 @@
 import "./App.css";
-import { injective } from "viem/chains";
+import { injective, polygon } from "viem/chains";
 import {
 	INJ_USDT_ADDRESS,
 	POLYGON_DESINTATION_ADDRESS,
@@ -10,6 +10,8 @@ import { ErrorDisplay } from "./src/components/ErrorDisplay";
 import { WalletConnectionButton } from "./src/components/WalletConnectionButton";
 import { WalletInfo } from "./src/components/WalletInfo";
 import { useWallet } from "./src/hooks/useWallet";
+import { client } from "./src/lib/poly-client";
+import { getSafeWallet } from "./src/utils/get-safe-wallet";
 
 function App() {
 	const {
@@ -24,9 +26,38 @@ function App() {
 		walletClient,
 	} = useWallet();
 
+	async function getPolymarketSafeAddress() {
+		if (!account) {
+			console.error("Please connect your wallet first");
+			return;
+		}
+
+		const safeAddress = getSafeWallet(account);
+
+		const isSafeDeployed = await client.getDeployed(safeAddress);
+		console.log(
+			"🪵 | getPolymarketSafeAddress | isSafeDeployed:",
+			isSafeDeployed,
+		);
+
+		if (!isSafeDeployed) {
+			await walletClient?.switchChain(polygon);
+			// need to deploy the safe here
+			const response = await client.deploy();
+			console.log("🪵 | getPolymarketSafeAddress | response:", response);
+			const result = await response.wait();
+			console.log("🪵 | getPolymarketSafeAddress | result:", result);
+			console.log("🪵 | Safe address:", safeAddress);
+		}
+	}
+
 	return (
 		<div className="flex flex-col items-center gap-4 p-8">
 			<h1 className="text-5xl">Injective React</h1>
+
+			<button type="button" onClick={getPolymarketSafeAddress}>
+				Deploy Polymarket
+			</button>
 
 			{!account || !walletClient ? (
 				<WalletConnectionButton

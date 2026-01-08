@@ -1,7 +1,7 @@
-import { WalletClient } from "viem";
-import { POLYGON_DESINTATION_ADDRESS } from "../../constants";
+import { Address, WalletClient } from "viem";
 import { executeBridgeOrder } from "../lib/bridge-order";
 import type { deBridgeOrderResponse } from "../types";
+import { getSafeWallet } from "../utils/get-safe-wallet";
 
 type BridgeButtonProps = {
 	walletClient: WalletClient;
@@ -30,6 +30,13 @@ export function BridgeButton({
 			return;
 		}
 
+		if (!walletClient.account) {
+			onError("Please connect your wallet first");
+			return;
+		}
+
+		const safeAddress = getSafeWallet(walletClient.account.address) as Address;
+
 		const bridgeParams = {
 			injectiveAddress,
 			srcChainTokenIn: orderEstimation.estimation.srcChainTokenIn
@@ -39,7 +46,7 @@ export function BridgeButton({
 			dstChainId: "137", // Polygon
 			dstChainTokenOut: orderEstimation.estimation.dstChainTokenOut
 				.address as `0x${string}`,
-			dstChainTokenOutRecipient: POLYGON_DESINTATION_ADDRESS,
+			dstChainTokenOutRecipient: safeAddress,
 		};
 
 		try {
